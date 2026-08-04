@@ -62,6 +62,20 @@ export default function AccountScreen() {
   const [merchantUpiId, setMerchantUpiId] = useState('matrimonyapp@upi');
   const [merchantName, setMerchantName] = useState('Matrimony Services');
 
+  // Edit Profile States
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editAge, setEditAge] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editProfession, setEditProfession] = useState('');
+  const [editAbout, setEditAbout] = useState('');
+  const [editEducation, setEditEducation] = useState('');
+  const [editIncome, setEditIncome] = useState('');
+  const [editHeight, setEditHeight] = useState('');
+  const [editWeight, setEditWeight] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [myProfile, setMyProfile] = useState<any>(null);
+
   const router = useRouter();
 
   const loadData = async () => {
@@ -75,6 +89,9 @@ export default function AccountScreen() {
       const config = await api.getPaymentConfig();
       setMerchantUpiId(config.merchant_upi_id);
       setMerchantName(config.merchant_name);
+
+      const profile = await api.getMyProfile();
+      setMyProfile(profile);
     } catch (error: any) {
       console.error(error);
     } finally {
@@ -162,6 +179,63 @@ export default function AccountScreen() {
       Alert.alert('Payment Failed', error.message || 'Payment transaction failed.');
     } finally {
       setIsProcessingPay(false);
+    }
+  };
+
+  const openEditProfile = async () => {
+    setIsLoading(true);
+    try {
+      const profile = await api.getMyProfile();
+      setEditName(profile.name || '');
+      setEditAge(profile.age ? profile.age.toString() : '');
+      setEditLocation(profile.present_location || '');
+      setEditProfession(profile.profession || '');
+      setEditAbout(profile.about || '');
+      setEditEducation(profile.education || '');
+      setEditIncome(profile.annual_income ? profile.annual_income.toString() : '');
+      setEditHeight(profile.height ? profile.height.toString() : '');
+      setEditWeight(profile.weight ? profile.weight.toString() : '');
+      setEditModalVisible(true);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not retrieve profile information.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      Alert.alert('Validation Error', 'Name cannot be empty.');
+      return;
+    }
+    const ageNum = parseInt(editAge);
+    if (isNaN(ageNum) || ageNum < 18) {
+      Alert.alert('Validation Error', 'Age must be a valid number and at least 18.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const updatedData = {
+        name: editName.trim(),
+        age: ageNum,
+        present_location: editLocation.trim(),
+        profession: editProfession.trim(),
+        about: editAbout.trim(),
+        education: editEducation.trim(),
+        annual_income: editIncome ? parseFloat(editIncome) : null,
+        height: editHeight ? parseFloat(editHeight) : null,
+        weight: editWeight ? parseFloat(editWeight) : null,
+      };
+
+      await api.updateMyProfile(updatedData);
+      Alert.alert('Success', 'Profile updated successfully!');
+      setEditModalVisible(false);
+      loadData(); // Refresh summary values
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not save profile changes.');
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -329,10 +403,27 @@ export default function AccountScreen() {
 
         {/* Navigation Options List */}
         <View style={styles.menuContainer}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={openEditProfile}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="create-outline" size={22} color={Colors.light.primary} />
               <Text style={styles.menuItemText}>Edit Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => {
+              if (myProfile) {
+                router.push(`/profile/${myProfile.id}`);
+              } else {
+                Alert.alert('Loading', 'Profile details are loading, please try again.');
+              }
+            }}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="eye-outline" size={22} color={Colors.light.primary} />
+              <Text style={styles.menuItemText}>Preview My Profile</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
@@ -681,6 +772,141 @@ export default function AccountScreen() {
               <Text style={styles.secureNotice}>
                 🔒 Secure SSL encrypted transaction connection.
               </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 5: Edit Profile */}
+      <Modal visible={editModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Edit Profile Details</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)} disabled={isSavingProfile}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>FULL NAME</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Ahmed Khan"
+                placeholderTextColor={Colors.light.textSecondary}
+                editable={!isSavingProfile}
+              />
+
+              <Text style={styles.inputLabel}>AGE</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editAge}
+                onChangeText={setEditAge}
+                placeholder="28"
+                placeholderTextColor={Colors.light.textSecondary}
+                keyboardType="numeric"
+                maxLength={3}
+                editable={!isSavingProfile}
+              />
+
+              <Text style={styles.inputLabel}>PRESENT LOCATION (CITY/DISTRICT)</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editLocation}
+                onChangeText={setEditLocation}
+                placeholder="Mumbai"
+                placeholderTextColor={Colors.light.textSecondary}
+                editable={!isSavingProfile}
+              />
+
+              <Text style={styles.inputLabel}>PROFESSION</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editProfession}
+                onChangeText={setEditProfession}
+                placeholder="Software Engineer"
+                placeholderTextColor={Colors.light.textSecondary}
+                editable={!isSavingProfile}
+              />
+
+              <Text style={styles.inputLabel}>EDUCATION</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editEducation}
+                onChangeText={setEditEducation}
+                placeholder="B.Tech Computer Science"
+                placeholderTextColor={Colors.light.textSecondary}
+                editable={!isSavingProfile}
+              />
+
+              <Text style={styles.inputLabel}>ANNUAL INCOME (INR)</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editIncome}
+                onChangeText={setEditIncome}
+                placeholder="1200000"
+                placeholderTextColor={Colors.light.textSecondary}
+                keyboardType="numeric"
+                editable={!isSavingProfile}
+              />
+
+              <View style={styles.rowInputs}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.inputLabel}>HEIGHT (CM)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editHeight}
+                    onChangeText={setEditHeight}
+                    placeholder="178"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={3}
+                    editable={!isSavingProfile}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>WEIGHT (KG)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editWeight}
+                    onChangeText={setEditWeight}
+                    placeholder="74"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={3}
+                    editable={!isSavingProfile}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.inputLabel}>ABOUT ME</Text>
+              <TextInput
+                style={[styles.paymentInput, { height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
+                value={editAbout}
+                onChangeText={setEditAbout}
+                placeholder="Tell potential matches about yourself, hobbies, values, etc..."
+                placeholderTextColor={Colors.light.textSecondary}
+                multiline
+                numberOfLines={3}
+                editable={!isSavingProfile}
+              />
+
+              <TouchableOpacity
+                style={[styles.payNowBtn, { backgroundColor: isSavingProfile ? '#9ca3af' : Colors.light.primary, marginBottom: 40 }]}
+                onPress={handleSaveProfile}
+                disabled={isSavingProfile}
+              >
+                {isSavingProfile ? (
+                  <View style={styles.payBtnLoadingRow}>
+                    <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.payNowBtnText}>Saving Profile Changes...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.payNowBtnText}>Save Profile Details</Text>
+                )}
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>

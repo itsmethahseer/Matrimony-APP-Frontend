@@ -188,6 +188,8 @@ export const api = {
   viewContact: (targetUserId: number) => 
     apiRequest('POST', `/api/explore/contact-views/${targetUserId}`),
     
+  getViewedContacts: () => apiRequest<any[]>('GET', '/api/explore/contact-views/viewed-by-me'),
+    
   getFavourites: () => apiRequest('GET', '/api/explore/favourites'),
   
   addFavourite: (favouritedId: number) => 

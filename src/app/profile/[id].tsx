@@ -73,6 +73,7 @@ export default function ProfileDetailsScreen() {
   const [creditsRemaining, setCreditsRemaining] = useState(0);
   const [isCreditModalVisible, setIsCreditModalVisible] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const noteTimeoutRef = useRef<any>(null);
 
@@ -101,6 +102,22 @@ export default function ProfileDetailsScreen() {
       // 4. Fetch menu summary to see credit balance
       const menu = await api.getMenuSummary();
       setCreditsRemaining(50 - menu.remaining_contact_views); // calculated offset or display standard credits
+      setCurrentUserId(menu.user_id);
+
+      // 5. Handle self-preview or already unlocked checks
+      if (data.user_id === menu.user_id) {
+        setIsContactUnlocked(true);
+      } else {
+        try {
+          const viewed = await api.getViewedContacts();
+          const alreadyViewed = viewed.some((cv: any) => cv.receiver_id === data.user_id);
+          if (alreadyViewed) {
+            setIsContactUnlocked(true);
+          }
+        } catch (e) {
+          console.error('Could not check viewed contacts', e);
+        }
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Could not load profile details');
     } finally {
@@ -344,62 +361,72 @@ export default function ProfileDetailsScreen() {
         ) : null}
 
         {/* Private Notes Section */}
-        <View style={styles.notesSection}>
-          <View style={styles.notesHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="document-text" size={18} color={Colors.light.secondary} />
-              <Text style={styles.notesTitle}>Private Match Note</Text>
+        {profile.user_id !== currentUserId && (
+          <View style={styles.notesSection}>
+            <View style={styles.notesHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="document-text" size={18} color={Colors.light.secondary} />
+                <Text style={styles.notesTitle}>Private Match Note</Text>
+              </View>
+              <View style={styles.noteNotice}>
+                <Text style={styles.noteNoticeText}>ONLY VISIBLE TO YOU</Text>
+              </View>
             </View>
-            <View style={styles.noteNotice}>
-              <Text style={styles.noteNoticeText}>ONLY VISIBLE TO YOU</Text>
-            </View>
+            
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Tap to write a private note about this match (e.g. 'Discuss family values next', 'Met on weekend call'). Changes save automatically."
+              placeholderTextColor="#aaa"
+              multiline
+              numberOfLines={4}
+              value={noteText}
+              onChangeText={handleNoteChange}
+            />
           </View>
-          
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Tap to write a private note about this match (e.g. 'Discuss family values next', 'Met on weekend call'). Changes save automatically."
-            placeholderTextColor="#aaa"
-            multiline
-            numberOfLines={4}
-            value={noteText}
-            onChangeText={handleNoteChange}
-          />
-        </View>
+        )}
 
       </ScrollView>
 
       {/* Floating Bottom Action Bar */}
-      <View style={styles.floatingActionBar}>
-        <TouchableOpacity 
-          style={[styles.floatingCircleBtn, isFavourite && styles.favCircleBtnActive]}
-          onPress={handleFavouriteToggle}
-        >
-          <Ionicons 
-            name={isFavourite ? 'star' : 'star-outline'} 
-            size={22} 
-            color={isFavourite ? '#fff' : Colors.light.primary} 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.floatingExpressBtn} onPress={handleExpressInterest}>
-          <Ionicons name="heart" size={20} color="#fff" />
-          <Text style={styles.expressBtnText}>Express Interest</Text>
-        </TouchableOpacity>
-
-        {!isContactUnlocked ? (
+      {profile.user_id === currentUserId ? (
+        <View style={[styles.floatingActionBar, { justifyContent: 'center', backgroundColor: Colors.light.primary, height: 56, borderTopWidth: 0 }]}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>
+            👁️ Viewing how matches see your profile
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.floatingActionBar}>
           <TouchableOpacity 
-            style={styles.floatingUnlockBtn} 
-            onPress={() => setIsCreditModalVisible(true)}
+            style={[styles.floatingCircleBtn, isFavourite && styles.favCircleBtnActive]}
+            onPress={handleFavouriteToggle}
           >
-            <Ionicons name="call" size={20} color="#fff" />
-            <Ionicons name="lock-closed" size={10} color={Colors.light.secondaryContainer} style={styles.lockBadge} />
+            <Ionicons 
+              name={isFavourite ? 'star' : 'star-outline'} 
+              size={22} 
+              color={isFavourite ? '#fff' : Colors.light.primary} 
+            />
           </TouchableOpacity>
-        ) : (
-          <View style={[styles.floatingCircleBtn, { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: Colors.light.emerald }]}>
-            <Ionicons name="checkmark" size={22} color={Colors.light.emerald} />
-          </View>
-        )}
-      </View>
+
+          <TouchableOpacity style={styles.floatingExpressBtn} onPress={handleExpressInterest}>
+            <Ionicons name="heart" size={20} color="#fff" />
+            <Text style={styles.expressBtnText}>Express Interest</Text>
+          </TouchableOpacity>
+
+          {!isContactUnlocked ? (
+            <TouchableOpacity 
+              style={styles.floatingUnlockBtn} 
+              onPress={() => setIsCreditModalVisible(true)}
+            >
+              <Ionicons name="call" size={20} color="#fff" />
+              <Ionicons name="lock-closed" size={10} color={Colors.light.secondaryContainer} style={styles.lockBadge} />
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.floatingCircleBtn, { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: Colors.light.emerald }]}>
+              <Ionicons name="checkmark" size={22} color={Colors.light.emerald} />
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Credits Unlock Confirmation Modal */}
       <Modal visible={isCreditModalVisible} animationType="fade" transparent>

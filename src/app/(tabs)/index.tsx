@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Platform,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,13 @@ interface Profile {
   present_location?: string;
   profession?: string;
   photos?: Array<{ url: string; is_main: boolean }>;
+  about?: string;
+  education?: string;
+  religion?: string;
+  sect?: string;
+  height?: number;
+  weight?: number;
+  marital_status?: string;
 }
 
 const CATEGORIES = [
@@ -42,6 +50,8 @@ const CATEGORIES = [
 export default function DiscoverScreen() {
   const [selectedCategory, setSelectedCategory] = useState('my_matches');
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -95,7 +105,10 @@ export default function DiscoverScreen() {
       <TouchableOpacity 
         style={styles.card}
         activeOpacity={0.95}
-        onPress={() => router.push(`/profile/${item.id}`)}
+        onPress={() => {
+          setPreviewProfile(item);
+          setPreviewModalVisible(true);
+        }}
       >
         <View style={styles.imageContainer}>
           <Image source={{ uri: mainPhoto }} style={styles.image} />
@@ -203,6 +216,100 @@ export default function DiscoverScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Quick Profile Preview Modal */}
+      <Modal visible={previewModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.previewContainer}>
+            {previewProfile && (
+              <>
+                <View style={styles.previewHeader}>
+                  <Text style={styles.previewTitle}>Quick Profile Preview</Text>
+                  <TouchableOpacity 
+                    onPress={() => setPreviewModalVisible(false)}
+                    style={styles.previewCloseBtn}
+                  >
+                    <Ionicons name="close" size={24} color="#000" />
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={[1]}
+                  keyExtractor={(i) => i.toString()}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={() => {
+                    const mainPhoto = previewProfile.photos?.find((p) => p.is_main)?.url || 
+                                      (previewProfile.photos && previewProfile.photos.length > 0 ? previewProfile.photos[0].url : 'https://via.placeholder.com/150');
+                    return (
+                      <View style={styles.previewScrollContent}>
+                        <Image source={{ uri: mainPhoto }} style={styles.previewImage} />
+                        
+                        <View style={styles.previewMeta}>
+                          <Text style={styles.previewName}>{previewProfile.name}, {previewProfile.age}</Text>
+                          <Text style={styles.previewSub}>{previewProfile.profession || 'Profession Not Disclosed'}</Text>
+                          <Text style={styles.previewLoc}>📍 {previewProfile.present_location || 'India'}</Text>
+                        </View>
+
+                        <View style={styles.previewSpecs}>
+                          <View style={styles.specBox}>
+                            <Ionicons name="school-outline" size={16} color={Colors.light.primary} />
+                            <Text style={styles.specLabel}>EDUCATION</Text>
+                            <Text style={styles.specVal} numberOfLines={1}>{previewProfile.education || 'Not Disclosed'}</Text>
+                          </View>
+                          <View style={styles.specBox}>
+                            <Ionicons name="ribbon-outline" size={16} color={Colors.light.primary} />
+                            <Text style={styles.specLabel}>RELIGION/SECT</Text>
+                            <Text style={styles.specVal}>{previewProfile.religion || 'Islam'} ({previewProfile.sect || 'Sunni'})</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.previewSpecs}>
+                          <View style={styles.specBox}>
+                            <Ionicons name="resize-outline" size={16} color={Colors.light.primary} />
+                            <Text style={styles.specLabel}>HEIGHT/WEIGHT</Text>
+                            <Text style={styles.specVal}>{previewProfile.height ? `${previewProfile.height} cm` : 'N/A'} / {previewProfile.weight ? `${previewProfile.weight} kg` : 'N/A'}</Text>
+                          </View>
+                          <View style={styles.specBox}>
+                            <Ionicons name="heart-half-outline" size={16} color={Colors.light.primary} />
+                            <Text style={styles.specLabel}>MARITAL STATUS</Text>
+                            <Text style={styles.specVal}>{previewProfile.marital_status || 'Never Married'}</Text>
+                          </View>
+                        </View>
+
+                        {previewProfile.about && (
+                          <View style={styles.aboutContainer}>
+                            <Text style={styles.aboutTitle}>About Me</Text>
+                            <Text style={styles.aboutText}>{previewProfile.about}</Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  }}
+                />
+
+                <View style={styles.previewFooter}>
+                  <TouchableOpacity 
+                    style={[styles.footerBtn, styles.closeBtn]} 
+                    onPress={() => setPreviewModalVisible(false)}
+                  >
+                    <Text style={styles.closeBtnText}>Close</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.footerBtn, styles.fullProfileBtn]} 
+                    onPress={() => {
+                      setPreviewModalVisible(false);
+                      router.push(`/profile/${previewProfile.id}`);
+                    }}
+                  >
+                    <Text style={styles.fullProfileBtnText}>Full Profile</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -385,6 +492,137 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.primary,
   },
   retryBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  previewContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    padding: 20,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  previewCloseBtn: {
+    padding: 4,
+  },
+  previewScrollContent: {
+    paddingTop: 16,
+    gap: 16,
+  },
+  previewImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
+    resizeMode: 'cover',
+  },
+  previewMeta: {
+    gap: 4,
+    marginTop: 4,
+  },
+  previewName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+  },
+  previewSub: {
+    fontSize: 15,
+    color: Colors.light.textSecondary,
+    fontWeight: '500',
+  },
+  previewLoc: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    marginTop: 2,
+  },
+  previewSpecs: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  specBox: {
+    flex: 1,
+    backgroundColor: '#fbfbfb',
+    borderWidth: 1,
+    borderColor: '#f0e9e4',
+    borderRadius: 12,
+    padding: 12,
+    gap: 4,
+  },
+  specLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: Colors.light.textSecondary,
+    letterSpacing: 0.5,
+  },
+  specVal: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+  },
+  aboutContainer: {
+    backgroundColor: 'rgba(115, 92, 0, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(115, 92, 0, 0.08)',
+    borderRadius: 12,
+    padding: 16,
+    gap: 6,
+    marginBottom: 20,
+  },
+  aboutTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.light.secondary,
+  },
+  aboutText: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+  },
+  previewFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fff',
+  },
+  footerBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeBtn: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  closeBtnText: {
+    color: '#374151',
+    fontWeight: 'bold',
+  },
+  fullProfileBtn: {
+    backgroundColor: Colors.light.primary,
+  },
+  fullProfileBtnText: {
     color: '#fff',
     fontWeight: 'bold',
   },

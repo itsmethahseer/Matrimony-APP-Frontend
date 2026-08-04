@@ -74,9 +74,11 @@ export default function InterestsScreen() {
     try {
       await api.respondToInterest(interestId, status);
       Alert.alert('Status Updated', `Interest successfully ${status.toLowerCase()}!`);
-      // Update local state to reflect change
+      // Update local state to reflect change (filter out declined requests instantly)
       setInterests((prev) => 
-        prev.map((item) => (item.id === interestId ? { ...item, status } : item))
+        status === 'Declined'
+          ? prev.filter((item) => item.id !== interestId)
+          : prev.map((item) => (item.id === interestId ? { ...item, status } : item))
       );
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Could not update status');
