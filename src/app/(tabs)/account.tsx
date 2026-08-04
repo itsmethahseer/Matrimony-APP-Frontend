@@ -1,0 +1,814 @@
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  SafeAreaView,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
+  Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { api, removeToken } from '@/services/api';
+import { Colors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+
+interface MenuSummary {
+  name: string;
+  user_id: number;
+  membership_status: string;
+  plan_type: string | null;
+  remaining_contact_views: number;
+  remaining_messages: number;
+  remaining_call_time: number;
+  plan_validity: string | null;
+  is_expired: boolean;
+}
+
+export default function AccountScreen() {
+  const [summary, setSummary] = useState<MenuSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+
+  // Modals visibility states
+  const [subModalVisible, setSubModalVisible] = useState(false);
+  const [verifyModalVisible, setVerifyModalVisible] = useState(false);
+  const [supportModalVisible, setSupportModalVisible] = useState(false);
+  
+  // Support data state
+  const [supportData, setSupportData] = useState<any>(null);
+
+  // Verification form state
+  const [selectedFile, setSelectedFile] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const router = useRouter();
+
+  const loadData = async () => {
+    try {
+      const menuData = await api.getMenuSummary();
+      setSummary(menuData);
+      
+      const me = await api.getMe();
+      setUserData(me);
+    } catch (error: any) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleLogout = async () => {
+    const logoutAction = async () => {
+      await removeToken();
+      router.replace('/login');
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('Are you sure you want to log out of your session?');
+      if (confirmLogout) {
+        await logoutAction();
+      }
+    } else {
+      Alert.alert(
+        'Log Out',
+        'Are you sure you want to log out of your session?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Log Out', 
+            style: 'destructive',
+            onPress: logoutAction
+          }
+        ]
+      );
+    }
+  };
+
+  const handleUpgrade = async (plan: 'Silver' | 'Gold' | 'Platinum') => {
+    setIsLoading(true);
+    setSubModalVisible(false);
+    try {
+      await api.subscribePlan(plan);
+      Alert.alert('Subscription Upgraded', `Successfully upgraded to the ${plan} Plan!`);
+      loadData(); // Reload balances
+    } catch (error: any) {
+      Alert.alert('Upgrade Failed', error.message || 'Upgrade transaction failed.');
+      setIsLoading(false);
+    }
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        if (Platform.OS === 'web') {
+          alert('Permission to access media library is required.');
+        } else {
+          Alert.alert('Permission Denied', 'Permission to access media library is required.');
+        }
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        
+        if (Platform.OS === 'web') {
+          const response = await fetch(asset.uri);
+          const blob = await response.blob();
+          const file = new File([blob], asset.fileName || 'verification_doc.jpg', { type: blob.type || 'image/jpeg' });
+          setSelectedFile({
+            file: file,
+            name: asset.fileName || 'verification_doc.jpg',
+            uri: asset.uri
+          });
+        } else {
+          setSelectedFile({
+            file: {
+              uri: asset.uri,
+              name: asset.fileName || 'verification_doc.jpg',
+              type: asset.mimeType || 'image/jpeg',
+            },
+            name: asset.fileName || 'verification_doc.jpg',
+            uri: asset.uri
+          });
+        }
+      }
+    } catch (error: any) {
+      if (Platform.OS === 'web') {
+        alert(error.message || 'Error picking document');
+      } else {
+        Alert.alert('Error', error.message || 'Error picking document');
+      }
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!selectedFile) return;
+    setIsVerifying(true);
+    try {
+      await api.uploadVerifyId(selectedFile.file);
+      if (Platform.OS === 'web') {
+        alert('Verification document uploaded and submitted! Admin will review shortly.');
+      } else {
+        Alert.alert('Document Submitted', 'Verification document uploaded and submitted! Admin will review shortly.');
+      }
+      setVerifyModalVisible(false);
+      setSelectedFile(null);
+      loadData(); // Reload user data status
+    } catch (error: any) {
+      if (Platform.OS === 'web') {
+        alert(error.message || 'Verification upload failed.');
+      } else {
+        Alert.alert('Error', error.message || 'Verification upload failed.');
+      }
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const openSupport = async () => {
+    setSupportModalVisible(true);
+    try {
+      const data = await api.getSupport();
+      setSupportData(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (isLoading || !summary) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.light.primary} />
+      </View>
+    );
+  }
+
+  // Get user avatar or placeholder
+  const avatarUrl = userData?.photos?.find((p: any) => p.is_main)?.url || 'https://via.placeholder.com/150';
+  const isVerified = userData?.id_verification_status === 'Verified';
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Profile Header */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            {isVerified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+              </View>
+            )}
+          </View>
+          <Text style={styles.profileName}>{summary.name}</Text>
+          <Text style={styles.profileId}>ID: SM-{summary.user_id}</Text>
+        </View>
+
+        {/* Membership Plan Card */}
+        <View style={styles.membershipCard}>
+          <View style={styles.membershipHeader}>
+            <View>
+              <Text style={styles.membershipTierLabel}>CURRENT TIER</Text>
+              <Text style={styles.membershipTierName}>
+                {summary.plan_type ? `${summary.plan_type} Member` : 'Free Account'}
+              </Text>
+            </View>
+            <Ionicons name="ribbon-sharp" size={32} color={Colors.light.secondaryContainer} />
+          </View>
+
+          <View style={styles.quotaGrid}>
+            <View style={styles.quotaBox}>
+              <Text style={styles.quotaLabel}>CONTACTS</Text>
+              <Text style={styles.quotaValue}>
+                {summary.remaining_contact_views === 9999 ? '∞' : summary.remaining_contact_views}
+              </Text>
+            </View>
+            <View style={styles.quotaBox}>
+              <Text style={styles.quotaLabel}>MESSAGES</Text>
+              <Text style={styles.quotaValue}>
+                {summary.remaining_messages === 9999 ? '∞' : summary.remaining_messages}
+              </Text>
+            </View>
+            <View style={styles.quotaBox}>
+              <Text style={styles.quotaLabel}>MINUTES</Text>
+              <Text style={styles.quotaValue}>{summary.remaining_call_time}</Text>
+            </View>
+          </View>
+
+          <View style={styles.membershipFooter}>
+            <Text style={styles.validityText}>
+              {summary.plan_validity 
+                ? `Valid until: ${new Date(summary.plan_validity).toLocaleDateString()}` 
+                : 'Subscribe to view profiles'}
+            </Text>
+            <TouchableOpacity 
+              style={styles.upgradeBtn}
+              onPress={() => setSubModalVisible(true)}
+            >
+              <Text style={styles.upgradeBtnText}>Upgrade</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Navigation Options List */}
+        <View style={styles.menuContainer}>
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="create-outline" size={22} color={Colors.light.primary} />
+              <Text style={styles.menuItemText}>Edit Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => setSubModalVisible(true)}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="card-outline" size={22} color={Colors.light.primary} />
+              <Text style={styles.menuItemText}>Subscriptions & Billing</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => setVerifyModalVisible(true)}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="shield-checkmark-outline" size={22} color={Colors.light.primary} />
+              <View>
+                <Text style={styles.menuItemText}>Verification Status</Text>
+                <Text style={styles.menuItemSubtext}>
+                  Status: <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>{userData?.id_verification_status || 'Unverified'}</Text>
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={openSupport}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="help-circle-outline" size={22} color={Colors.light.primary} />
+              <Text style={styles.menuItemText}>Help & Support</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={22} color={Colors.light.error} />
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+
+      </ScrollView>
+
+      {/* --- MODALS --- */}
+
+      {/* Modal 1: Subscriptions Upgrade */}
+      <Modal visible={subModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Choose a Plan</Text>
+              <TouchableOpacity onPress={() => setSubModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+              {/* Plan 1: Silver */}
+              <TouchableOpacity style={styles.planCard} onPress={() => handleUpgrade('Silver')}>
+                <View style={styles.planHeader}>
+                  <Text style={styles.planTitle}>Silver Plan</Text>
+                  <Text style={styles.planPrice}>₹1,499 / mo</Text>
+                </View>
+                <Text style={styles.planDesc}>• 20 Contact Views • 200 Messages • 60 Mins Calls • Validity: 30 days</Text>
+              </TouchableOpacity>
+
+              {/* Plan 2: Gold */}
+              <TouchableOpacity style={[styles.planCard, styles.goldPlanCard]} onPress={() => handleUpgrade('Gold')}>
+                <View style={styles.planHeader}>
+                  <Text style={[styles.planTitle, { color: '#735c00' }]}>Gold Plan</Text>
+                  <Text style={[styles.planPrice, { color: '#735c00' }]}>₹2,999 / 3 mos</Text>
+                </View>
+                <Text style={styles.planDesc}>• 100 Contact Views • 1000 Messages • 300 Mins Calls • Validity: 90 days</Text>
+              </TouchableOpacity>
+
+              {/* Plan 3: Platinum */}
+              <TouchableOpacity style={[styles.planCard, styles.platPlanCard]} onPress={() => handleUpgrade('Platinum')}>
+                <View style={styles.planHeader}>
+                  <Text style={[styles.planTitle, { color: '#fff' }]}>Platinum Plan</Text>
+                  <Text style={[styles.planPrice, { color: '#fff' }]}>₹5,499 / 6 mos</Text>
+                </View>
+                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Contacts • Unlimited Messages • 1000 Mins Calls • Validity: 180 days</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 2: ID Verification */}
+      <Modal visible={verifyModalVisible} animationType="fade" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.alertCard}>
+            <View style={styles.alertHeader}>
+              <Text style={styles.alertTitle}>Identity Verification</Text>
+              <TouchableOpacity onPress={() => setVerifyModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.alertBody}>
+              <Text style={styles.alertText}>
+                Upload your ID document image (identity card, passport, or license) to get the verified badge and gain trust from matches.
+              </Text>
+              
+              <TouchableOpacity 
+                style={[styles.verifyInput, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', borderStyle: 'dashed', height: 80 }]}
+                onPress={handlePickDocument}
+              >
+                <Ionicons name="cloud-upload-outline" size={24} color={Colors.light.primary} />
+                <Text style={{ fontSize: 13, color: Colors.light.textSecondary, marginTop: 4, textAlign: 'center', paddingHorizontal: 10 }}>
+                  {selectedFile ? selectedFile.name : 'Select ID Card/Passport Image'}
+                </Text>
+              </TouchableOpacity>
+
+              {selectedFile?.uri && (
+                <View style={{ alignItems: 'center', marginVertical: 12 }}>
+                  <Image source={{ uri: selectedFile.uri }} style={{ width: 180, height: 110, borderRadius: 8, resizeMode: 'cover' }} />
+                </View>
+              )}
+
+              <TouchableOpacity 
+                style={[styles.verifySubmitBtn, { marginTop: selectedFile ? 10 : 20 }]}
+                onPress={handleVerify}
+                disabled={isVerifying || !selectedFile}
+              >
+                {isVerifying ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.verifySubmitBtnText}>Upload & Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 3: Help & Support */}
+      <Modal visible={supportModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Help & Support</Text>
+              <TouchableOpacity onPress={() => setSupportModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            {supportData ? (
+              <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.supportContactCard}>
+                  <Text style={styles.supportHeadline}>Need immediate assistance?</Text>
+                  <Text style={styles.supportDetail}>📧 Email: {supportData.support_email}</Text>
+                  <Text style={styles.supportDetail}>📞 Hotline: {supportData.hotline}</Text>
+                  <Text style={styles.supportDetail}>⏰ Hours: {supportData.operating_hours}</Text>
+                </View>
+
+                <Text style={styles.faqHeader}>Frequently Asked Questions</Text>
+                {supportData.faq?.map((faq: any, index: number) => (
+                  <View key={index} style={styles.faqCard}>
+                    <Text style={styles.faqQuestion}>Q: {faq.question}</Text>
+                    <Text style={styles.faqAnswer}>{faq.answer}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.sheetLoading}>
+                <ActivityIndicator size="large" color={Colors.light.primary} />
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  profileHeader: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 4,
+    borderColor: '#fff',
+    shadowColor: '#2d2926',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.light.emerald,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+  },
+  profileId: {
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    marginTop: 4,
+    letterSpacing: 1,
+  },
+  membershipCard: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+    elevation: 3,
+    marginBottom: 30,
+  },
+  membershipHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  membershipTierLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.light.onPrimaryContainer,
+    opacity: 0.8,
+    letterSpacing: 1,
+  },
+  membershipTierName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 4,
+  },
+  quotaGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quotaBox: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  quotaLabel: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#fff',
+    opacity: 0.7,
+    letterSpacing: 0.5,
+  },
+  quotaValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 4,
+  },
+  membershipFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 16,
+  },
+  validityText: {
+    fontSize: 12,
+    color: '#fff',
+    opacity: 0.8,
+  },
+  upgradeBtn: {
+    backgroundColor: Colors.light.secondaryContainer,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  upgradeBtnText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.light.onSecondaryContainer,
+    textTransform: 'uppercase',
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 8,
+    shadowColor: '#2d2926',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 30,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(233, 225, 220, 0.2)',
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  menuItemText: {
+    fontSize: 15,
+    color: Colors.light.text,
+    fontWeight: '500',
+  },
+  menuItemSubtext: {
+    fontSize: 10,
+    color: Colors.light.textSecondary,
+    marginTop: 2,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#ffdada',
+    borderWidth: 1,
+    borderColor: '#ffb3b5',
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.error,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Modal Layouts
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    padding: 24,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(233, 225, 220, 0.5)',
+    paddingBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  sheetScroll: {
+    marginBottom: 24,
+  },
+  sheetLoading: {
+    paddingVertical: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  planCard: {
+    backgroundColor: '#fff8f5',
+    borderWidth: 1,
+    borderColor: 'rgba(224, 191, 191, 0.5)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  goldPlanCard: {
+    backgroundColor: '#fffcf0',
+    borderColor: 'rgba(254, 214, 91, 0.5)',
+  },
+  platPlanCard: {
+    backgroundColor: Colors.light.primary,
+    borderColor: Colors.light.primary,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  planPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  planDesc: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+  },
+
+  // Alert Modal
+  alertCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 24,
+    alignSelf: 'center',
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 5,
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  alertBody: {
+    gap: 16,
+  },
+  alertText: {
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    lineHeight: 20,
+  },
+  verifyInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: Colors.light.surfaceVariant,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    color: Colors.light.text,
+  },
+  verifySubmitBtn: {
+    backgroundColor: Colors.light.primary,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verifySubmitBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+
+  // Support detail styles
+  supportContactCard: {
+    backgroundColor: 'rgba(115, 92, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 214, 91, 0.4)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  supportHeadline: {
+    fontWeight: 'bold',
+    color: Colors.light.secondary,
+    marginBottom: 8,
+  },
+  supportDetail: {
+    fontSize: 14,
+    color: Colors.light.text,
+    marginTop: 4,
+  },
+  faqHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: 12,
+  },
+  faqCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(233, 225, 220, 0.5)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  faqQuestion: {
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    fontSize: 14,
+  },
+  faqAnswer: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    marginTop: 6,
+    lineHeight: 18,
+  },
+});

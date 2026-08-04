@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>SoulMate | Messages</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#93000a",
+                    "primary": "#570013",
+                    "secondary": "#735c00",
+                    "on-surface-variant": "#584141",
+                    "on-secondary-fixed": "#241a00",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-variant": "#e9e1dc",
+                    "surface-dim": "#e1d8d4",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#ffdada",
+                    "error": "#ba1a1a",
+                    "inverse-surface": "#34302c",
+                    "surface-tint": "#af2b3e",
+                    "on-tertiary-fixed-variant": "#474744",
+                    "on-tertiary-container": "#a9a8a4",
+                    "inverse-on-surface": "#f8efea",
+                    "surface-container-highest": "#e9e1dc",
+                    "outline-variant": "#e0bfbf",
+                    "on-primary-fixed-variant": "#8e0f28",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#272725",
+                    "background": "#fff8f5",
+                    "surface-container-high": "#efe6e2",
+                    "on-tertiary-fixed": "#1b1c1a",
+                    "surface-bright": "#fff8f5",
+                    "on-primary-container": "#ff828a",
+                    "on-error": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#fed65b",
+                    "inverse-primary": "#ffb3b5",
+                    "tertiary-fixed": "#e4e2de",
+                    "primary-fixed-dim": "#ffb3b5",
+                    "outline": "#8c7071",
+                    "surface-container-low": "#fbf2ed",
+                    "surface-container": "#f5ece7",
+                    "on-surface": "#1e1b18",
+                    "secondary-fixed": "#ffe088",
+                    "on-background": "#1e1b18",
+                    "tertiary-fixed-dim": "#c8c6c3",
+                    "secondary-fixed-dim": "#e9c349",
+                    "on-secondary-container": "#745c00",
+                    "tertiary-container": "#3d3d3b",
+                    "on-primary-fixed": "#40000b",
+                    "primary-container": "#800020",
+                    "on-secondary-fixed-variant": "#574500",
+                    "surface": "#fff8f5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap-sm": "8px",
+                    "grid-gutter": "12px",
+                    "container-margin": "20px",
+                    "stack-gap-lg": "32px",
+                    "stack-gap-md": "16px"
+            },
+            "fontFamily": {
+                    "display-lg-mobile": ["Playfair Display"],
+                    "headline-md": ["Playfair Display"],
+                    "body-sm": ["Plus Jakarta Sans"],
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "display-lg": ["Playfair Display"],
+                    "title-lg": ["Plus Jakarta Sans"],
+                    "label-caps": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "display-lg-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .message-gradient {
+            background: linear-gradient(180deg, rgba(255,248,245,0) 0%, rgba(255,248,245,1) 100%);
+        }
+        body {
+            background-color: #fff8f5;
+            color: #1e1b18;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar for subtle feel */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e9e1dc;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-body-lg text-body-lg">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-container-margin h-16 w-full shadow-[0px_4px_20px_rgba(45,41,38,0.04)] bg-surface dark:bg-surface-dim">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a handsome Indian man in his early 30s with a warm smile, wearing a premium linen shirt. The lighting is soft and editorial, set against a blurred ivory background that maintains the brand's luxurious, minimalist aesthetic. High-quality photography with rich skin tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBz37La-Jo8gKHlWIoRyfrEPjE5lqVKR02QVGZCIALIt6JlBPrei-oyZNa8OTqORFx5roZgmbOuq5p2FK2PyZhMMY33Pki9aF5H-CXatavbB0J_VeEpOYIEzbtRheddQZo5atx1ZcwzNLGWOBhUx6xsEfcxMpny0FhYGQYf24wNkRf8_QFBlJklxcL_MS17TR90uFHBA3Skxbn7UuT2Iu1hj-NbLH30C5NycGqpB-igDW6nNVj_Fms2wA"/>
+</div>
+<h1 class="font-display-lg-mobile text-display-lg-mobile text-primary dark:text-primary-fixed">SoulMate</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed">notifications</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 mt-16 mb-24 overflow-y-auto">
+<!-- Filter Tabs -->
+<div class="sticky top-16 bg-surface z-40 px-container-margin py-4">
+<div class="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
+<button class="flex-none px-6 py-2 rounded-full bg-primary text-on-primary font-bold shadow-sm transition-all text-label-caps">All</button>
+<button class="flex-none px-6 py-2 rounded-full bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 transition-all font-bold text-label-caps">Requests</button>
+<button class="flex-none px-6 py-2 rounded-full bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 transition-all font-bold text-label-caps">Chats</button>
+<button class="flex-none px-6 py-2 rounded-full bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 transition-all font-bold text-label-caps">Calls</button>
+</div>
+</div>
+<!-- Conversation List -->
+<div class="px-container-margin flex flex-col gap-1">
+<!-- Message Item 1: Active/Unread -->
+<div class="flex items-center gap-4 py-4 px-2 hover:bg-surface-container-low transition-colors rounded-xl cursor-pointer group active:scale-[0.98] duration-200">
+<div class="relative flex-none">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/10">
+<img class="w-full h-full object-cover" data-alt="A portrait of a stunning South Asian woman in her late 20s with elegant jewelry and a gentle expression. The image is bright with high-key lighting, capturing a sophisticated editorial mood. The background is a soft-focus garden setting during golden hour, reflecting a sense of peace and premium quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNjWC0s2Sd2xDE0GXBUThR3-TUSprYsIZony9KzDe57p2rcLIgp0nL7ZSmgwPr5WLhr9cAzgrColOoyehlY2evKYKqYc_U-IUe3cfNRlR5rlSSrzxKNBoqjrhyv45AgXi9fosfe_MiJ-VMyeo8D-SBSxc_BB7vDtYOIwTfLde53rd2SRaYn18Isq_Fm4Ym-GRxifiScGDmyJskSiFiVxbE7dEgf6APzRuljUhvH-duq1i-_9uHKK-pdw"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-surface rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Ishani Verma</h3>
+<span class="text-label-caps text-primary font-bold">12:45 PM</span>
+</div>
+<p class="text-body-sm text-on-surface font-semibold truncate pr-6">I'd love to hear more about your family background...</p>
+</div>
+<div class="flex-none">
+<div class="bg-primary text-on-primary w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold">2</div>
+</div>
+</div>
+<!-- Message Item 2 -->
+<div class="flex items-center gap-4 py-4 px-2 hover:bg-surface-container-low transition-colors rounded-xl cursor-pointer active:scale-[0.98] duration-200">
+<div class="relative flex-none">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a professional man in a sharp navy blazer, looking confident and approachable. The lighting is soft and even, highlighting refined features. The background is a minimalist modern office interior with warm ivory tones, consistent with a high-end matrimonial app aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDamvY3MV4OvnPTEIXPCl2wKRvXuPulmb31G9_qmnIdv8mMDaYEJSMIf2njqjP3OC2sLzDb6Ixh_bspJTWkQgDZ0eWo0GEswN8yXx4dx4yXqfgf10T3IpTP34d1wgy4WdD83yWZiYsFgf1tM3pI8jFAdoT-dFqYlKKeZk5an03-BbYF2QS9qpgk95mSE_K6KQFBmqT07v0AQSKNOIylRLbP_sW4tounqZc0HoROGemQIFuD6fgaZ2H2Cw"/>
+</div>
+</div>
+<div class="flex-1 min-w-0 border-b border-outline-variant/20 pb-4">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Rohan Malhotra</h3>
+<span class="text-label-caps text-on-surface-variant">Yesterday</span>
+</div>
+<p class="text-body-sm text-on-surface-variant truncate">It was great speaking with you yesterday. Let's...</p>
+</div>
+</div>
+<!-- Message Item 3 -->
+<div class="flex items-center gap-4 py-4 px-2 hover:bg-surface-container-low transition-colors rounded-xl cursor-pointer active:scale-[0.98] duration-200">
+<div class="relative flex-none">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent">
+<img class="w-full h-full object-cover" data-alt="Portrait of an elegant woman in a traditional silk saree, smiling warmly towards the camera. The photography style is high-end lifestyle, with soft natural light streaming through a window. Ivory and maroon color palette dominates the scene, evoking tradition and modern elegance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvAi9JvpP77kWDEtqqOzD5wTUHPM-THQpFcfBXxv1Pu56VzN1FGngDg2W2aIzyh5Q16PZ6fq9Skipqo6bwkYDuqpU4jfIyefb80Q87QnDLjffpzS0wTRmX8kcceMR38mHmBozDX_8m1iaVvcvhL4RR5E7J6I0RfPEfzx-_DgRIK-SfUrle8pLMcwqLIEZiwOYnwUh01ND3vE2jRwae9whoKwxWj9myswNmlxjr9M-ytd8z1gTSKUl5ag"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-surface rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0 border-b border-outline-variant/20 pb-4">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Ananya Singh</h3>
+<span class="text-label-caps text-on-surface-variant">2 days ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant truncate">My parents were asking about the meeting...</p>
+</div>
+</div>
+<!-- Message Item 4 -->
+<div class="flex items-center gap-4 py-4 px-2 hover:bg-surface-container-low transition-colors rounded-xl cursor-pointer active:scale-[0.98] duration-200">
+<div class="relative flex-none">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent">
+<img class="w-full h-full object-cover" data-alt="A focused headshot of a creative professional woman with a minimalist aesthetic. She is wearing a soft beige turtleneck, and the background is a clean, ivory-colored wall. The lighting is diffused and professional, creating a sense of serious intent and modern grace." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeCqXKD815PrWlHKVD8Qcm4CwnoH0YtVT9nLt_a9d8c_dzt_bc329B-xldlb2h0S2akUryqoj33UBGabCtURRqLrK70LALb0AlaqKODAkXsN9w3EZdpAEaY_avmEPE5XIWgmC5pSqTBKFdlhWXYp-QFAgVMlXPuTys4vtFVwHY2BVuS1wg4Kco4qlxGgui3fSo29fo-Vmtv9PzwiIhj5rR5fjfOjQNlr_Hv_NUFzKzHyIpXMR4eJywng"/>
+</div>
+</div>
+<div class="flex-1 min-w-0 border-b border-outline-variant/20 pb-4">
+<div class="flex justify-between items-baseline mb-1">
+<div class="flex items-center gap-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Meera Kapur</h3>
+<span class="material-symbols-outlined text-[16px] text-secondary fill-icon">verified</span>
+</div>
+<span class="text-label-caps text-on-surface-variant">Oct 12</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">done_all</span>
+<p class="text-body-sm truncate">I'll send the details over by evening.</p>
+</div>
+</div>
+</div>
+<!-- Message Item 5 -->
+<div class="flex items-center gap-4 py-4 px-2 hover:bg-surface-container-low transition-colors rounded-xl cursor-pointer active:scale-[0.98] duration-200">
+<div class="relative flex-none">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent">
+<img class="w-full h-full object-cover" data-alt="Portrait of a successful man in a white designer kurta, standing in a brightly lit modern courtyard. The aesthetic is extremely premium and traditional yet contemporary. The color tones are warm, focusing on maroons and creams, suggesting a high-status lifestyle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJxsokhhCnwSRSZ25iLoUu6oEUFN1eOuKlEfOJZQVk6BohHu_ZOecJcsaI2H-VTtolp9Ox5DtLG_cMOPkIIgURX-BLBP7yWEa1Ws6lw3iJMx8q_mmk0OTwDv7VgcIpRerMoPQ_AWW-qdXk07Tt91_KdRpGP2lP6cAMKI_HQ2OseFylZmz6SFyGKhqePBXZDDF6MUBgTTgxf4FGs97CShsKvA4kWuYZG7upaSmydrqdVDgGGydhrhymNg"/>
+</div>
+</div>
+<div class="flex-1 min-w-0 border-b border-outline-variant/20 pb-4">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Vikram Mehta</h3>
+<span class="text-label-caps text-on-surface-variant">Oct 10</span>
+</div>
+<p class="text-body-sm text-on-surface-variant truncate">That sounds perfect. Talk soon!</p>
+</div>
+</div>
+<!-- Message Item 6 -->
+<div class="flex items-center gap-4 py-4 px-2 hover:bg-surface-container-low transition-colors rounded-xl cursor-pointer active:scale-[0.98] duration-200">
+<div class="relative flex-none">
+<div class="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a young woman with deep expressive eyes, wearing an elegant light pink ethnic outfit. The background is a soft beige bokeh, highlighting her face. The mood is authentic and inviting, perfect for a high-end matchmaking platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA19Gr4zaHYHXdoKiZ_94hI9_OgEkM6iUSwrlx3eWrB_BSsoTdGzx_rt0fOEZ1wY_cp6bJOUSXIRT6JbTWabYlxtcfw-lbsL1HtEMSGyzAdTBgg9SeA9ltAIRHT-SGdPzWAknRoVN336tot53qSXwA9ujr1boDv0pVQcKD2yNPrCPHXNM2-t4HzTyLhGRZ_joc3GMGohWxE47tBr6THmGJL82eOc2LW7AiKfPdkMzaei2kEP2gKi3P29A"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-surface rounded-full"></div>
+</div>
+<div class="flex-1 min-w-0 border-b border-outline-variant/20 pb-4">
+<div class="flex justify-between items-baseline mb-1">
+<h3 class="font-title-lg text-title-lg text-on-surface truncate">Sanya Iyer</h3>
+<span class="text-label-caps text-on-surface-variant">Oct 08</span>
+</div>
+<p class="text-body-sm text-on-surface-variant truncate">Are you free for a call this weekend?</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed right-6 bottom-24 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-90 hover:scale-105 z-40">
+<span class="material-symbols-outlined text-[28px] fill-icon">chat</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl shadow-[0px_-4px_20px_rgba(45,41,38,0.04)] border-t border-outline-variant/30 bg-surface dark:bg-surface-container flex justify-around items-center h-20 pb-safe px-4 w-full">
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-label-caps mt-1">Discover</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">favorite</span>
+<span class="text-label-caps mt-1">Interests</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim after:content-[''] after:w-1 after:h-1 after:bg-primary after:rounded-full after:mt-1 active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined fill-icon">chat_bubble</span>
+<span class="text-label-caps mt-1">Chat</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">group_add</span>
+<span class="text-label-caps mt-1">Requests</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:opacity-100 transition-opacity active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-caps mt-1">Account</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for filter tabs
+        const filterButtons = document.querySelectorAll('.px-6.py-2.rounded-full');
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterButtons.forEach(b => {
+                    b.classList.remove('bg-primary', 'text-on-primary');
+                    b.classList.add('bg-surface-variant/30', 'text-on-surface-variant');
+                });
+                btn.classList.add('bg-primary', 'text-on-primary');
+                btn.classList.remove('bg-surface-variant/30', 'text-on-surface-variant');
+            });
+        });
+
+        // Add a subtle entrance animation for list items
+        document.addEventListener('DOMContentLoaded', () => {
+            const items = document.querySelectorAll('.px-2.hover\\:bg-surface-container-low');
+            items.forEach((item, index) => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    item.style.transition = 'all 0.4s ease-out';
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateY(0)';
+                }, index * 50);
+            });
+        });
+    </script>
+</body></html>

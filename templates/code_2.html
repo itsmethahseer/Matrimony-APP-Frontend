@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SoulMate | Aarav Sharma Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(255, 248, 245, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .profile-gradient {
+            background: linear-gradient(to top, rgba(87, 0, 19, 0.8) 0%, rgba(87, 0, 19, 0) 50%);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e0bfbf;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#93000a",
+                      "primary": "#570013",
+                      "secondary": "#735c00",
+                      "on-surface-variant": "#584141",
+                      "on-secondary-fixed": "#241a00",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-variant": "#e9e1dc",
+                      "surface-dim": "#e1d8d4",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#ffdada",
+                      "error": "#ba1a1a",
+                      "inverse-surface": "#34302c",
+                      "surface-tint": "#af2b3e",
+                      "on-tertiary-fixed-variant": "#474744",
+                      "on-tertiary-container": "#a9a8a4",
+                      "inverse-on-surface": "#f8efea",
+                      "surface-container-highest": "#e9e1dc",
+                      "outline-variant": "#e0bfbf",
+                      "on-primary-fixed-variant": "#8e0f28",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "tertiary": "#272725",
+                      "background": "#fff8f5",
+                      "surface-container-high": "#efe6e2",
+                      "on-tertiary-fixed": "#1b1c1a",
+                      "surface-bright": "#fff8f5",
+                      "on-primary-container": "#ff828a",
+                      "on-error": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#fed65b",
+                      "inverse-primary": "#ffb3b5",
+                      "tertiary-fixed": "#e4e2de",
+                      "primary-fixed-dim": "#ffb3b5",
+                      "outline": "#8c7071",
+                      "surface-container-low": "#fbf2ed",
+                      "surface-container": "#f5ece7",
+                      "on-surface": "#1e1b18",
+                      "secondary-fixed": "#ffe088",
+                      "on-background": "#1e1b18",
+                      "tertiary-fixed-dim": "#c8c6c3",
+                      "secondary-fixed-dim": "#e9c349",
+                      "on-secondary-container": "#745c00",
+                      "tertiary-container": "#3d3d3b",
+                      "on-primary-fixed": "#40000b",
+                      "primary-container": "#800020",
+                      "on-secondary-fixed-variant": "#574500",
+                      "surface": "#fff8f5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-gap-sm": "8px",
+                      "grid-gutter": "12px",
+                      "container-margin": "20px",
+                      "stack-gap-lg": "32px",
+                      "stack-gap-md": "16px"
+              },
+              "fontFamily": {
+                      "display-lg-mobile": ["Playfair Display"],
+                      "headline-md": ["Playfair Display"],
+                      "body-sm": ["Plus Jakarta Sans"],
+                      "body-lg": ["Plus Jakarta Sans"],
+                      "display-lg": ["Playfair Display"],
+                      "title-lg": ["Plus Jakarta Sans"],
+                      "label-caps": ["Plus Jakarta Sans"]
+              },
+              "fontSize": {
+                      "display-lg-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 shadow-[0px_4px_20px_rgba(45,41,38,0.04)] bg-surface flex justify-between items-center px-container-margin h-16">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-surface-variant/50 transition-colors active:scale-95 duration-200 rounded-full" onclick="history.back()">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-display-lg-mobile text-display-lg-mobile text-primary">SoulMate</h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">notifications</span>
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-variant">
+<img class="w-full h-full object-cover" data-alt="A sophisticated headshot of a premium user with a blurred architectural background. The lighting is warm and cinematic, reflecting a high-end matrimonial profile photo. Professional attire and a warm, inviting smile are key features, maintaining the SoulMate brand's elegant and modern ivory and maroon aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmiarSYKe1x4UCGC0XJv_8TZA2BVAv6gpwGz0oZWTIiKpBcPyGiDDlY2YboTdHUm9pKHuIsSkSnWux3DZSWKiQfHPze5kcspataXtYGRaA63LiUsT3dzrPyVuX0lJDAve3_q-Ifzf_AdyruDe3P7u4qGpnASZ97NS1e9DkRHLPx2MTd9EA1zwmNCPVGTb7jRRBlye1B-rB5rcJDujr_4Krb9nDow4KBDCp6_zXcqIPie4CyDrfqokCvQ"/>
+</div>
+</div>
+</header>
+<main class="mt-16 max-w-2xl mx-auto">
+<!-- Hero Section -->
+<section class="relative h-[65vh] w-full overflow-hidden">
+<div class="w-full h-full" data-alt="A stunning cinematic full-portrait of a handsome man in a tailored charcoal suit standing in a sunlit garden of a heritage mansion. The scene is bathed in golden hour light, with soft bokeh effects on the surrounding flowers. The image has a high-grammage paper texture quality, evoking luxury and serious commitment." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD5cLc9DL-Llvtpr9O6b4blOzuRaTwT1VOCNxjFyQ4xtdxeozXVi_zR17wxjGNalkMNo0g8icNkwytOCVuE1Yf2kZd42hGadNCX3I2QlNgSdyLqaV95XDrVVHMNLwetbzW7AbwYkY6hfPhRc1hNugrE4pN1OvbEoxBKgHrP_EFa4u5R2uuqjGTFu46xJf_2QHb7g-F1UR8MNbunkUvftBEhURth5ofAdpOEEU6nolH3uIsXw6ctg6V06Q')"></div>
+<div class="absolute inset-0 profile-gradient flex flex-col justify-end p-container-margin pb-12">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+<span class="text-white font-label-caps text-label-caps">Online Now</span>
+</div>
+<div class="flex items-center gap-3">
+<h2 class="font-display-lg text-display-lg text-white">Aarav Sharma, 31</h2>
+<span class="material-symbols-outlined text-secondary-container text-2xl" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<p class="font-body-lg text-body-lg text-white/90">Software Architect • Mumbai, India</p>
+</div>
+</section>
+<!-- Photo Gallery -->
+<section class="px-container-margin -mt-8 relative z-10">
+<div class="flex gap-grid-gutter overflow-x-auto pb-4 custom-scrollbar snap-x">
+<div class="flex-shrink-0 w-24 h-32 rounded-xl overflow-hidden shadow-sm snap-start bg-white p-1">
+<img class="w-full h-full object-cover rounded-lg" data-alt="Close up portrait of Aarav smiling warmly, high contrast lighting, premium photography style for a matrimonial app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAofulnZA_Pciyc5vr2JFyIyMq0bLu8HH9Gcgoi7NGZdZoJ6q-YDqsVuyqngUSCBBBS1Rz7ZZ-YRGIduSNI_75DlsBQG6N0DImGh6vDeUAXjr0RPe236pLBa25gWWKMlPnem9QqApVtctm4TG2RqhxJpq3b3jLoPdgtQ1s7RlAIi-Gi2z3wzq9TjssQWFtGYYRLnyEOISSLvHRdokCNppnTSsLZ33ONvhedsvacQ2V_yjjCgGj8YcwyzQ"/>
+</div>
+<div class="flex-shrink-0 w-24 h-32 rounded-xl overflow-hidden shadow-sm snap-start bg-white p-1">
+<img class="w-full h-full object-cover rounded-lg" data-alt="Aarav during a casual weekend hike, looking relaxed and energetic, lush green forest background, high-end mobile photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANVLT-iIppXVTAS1ZE9SQ01NIVakShUQVXvx86BCqmqRe5vWytXwWBGX0ttbh1zpf5uu98tcc2Fhp2z2LcQ12j652eoIziEGoHsGFBPr8J_OgfMw2XyuylKOtu7bYfHNTsEXI1edhmQ1H2UUG4R35fChv9Ca8HRM5DBk9LvsXgz-uFEqbVes7JzH46jAFok3NrrlTS80O-_TajgIEcsekWEgqSvQajaotHkOhltDRVs10VHKXnf4P9yw"/>
+</div>
+<div class="flex-shrink-0 w-24 h-32 rounded-xl overflow-hidden shadow-sm snap-start bg-white p-1">
+<img class="w-full h-full object-cover rounded-lg" data-alt="Aarav at a professional conference speaking on stage, conveying intelligence and leadership, blurred audience in background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbaMAL2QW_64lSGRvCUNB0EfUv-U_CMZBhMMr3XW1VJtrb2vOeBvS2x6oqyQmMbi27v6hgMAVbw-N4U-xNRJamX6OwydbXafOdcx-ZkqXOwCVn1bWeDBimubafpOe3s-6bLRcLTh6uGL5ng0IECGJG6erO6Ud8N1R6ncOMWLt3embYZpsBTJEbWRF74uyBEurKkmYFRp0bXOK5H2_8Lelbj5orZbRdglNVGjmvO7R69HRTuQBw_1YfJg"/>
+</div>
+<div class="flex-shrink-0 w-24 h-32 rounded-xl overflow-hidden shadow-sm snap-start bg-white p-1">
+<img class="w-full h-full object-cover rounded-lg" data-alt="Candid shot of Aarav reading a book in a luxury cafe with soft ivory tones and marble surfaces, sophisticated atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuK7maY7xrH6yGoAnhsrNMA2vtk2-TV0vq2AIC8t1cbaPgvnJFG_3CtzF1je9a5AJPLAdHpyE1AU2U9_flxw2tCPvKEZZ9VqYht9nWVVHDu_F3v3OKYxfIGJbFhIEVUJ1pULPMd7Y53NBhsSE2eTPUsYhklb66DBooK9F-zLVurd-3C7C7b_zTdrTwr1tm7wf5Tx2o5lDmTD_2kyD2q7A-cZ_EzlIRKRuILqyWpxnwhqUZvdoxIJBroA"/>
+</div>
+<div class="flex-shrink-0 w-24 h-32 rounded-xl overflow-hidden shadow-sm snap-start bg-white p-1 relative">
+<img class="w-full h-full object-cover rounded-lg" data-alt="Beautifully composed sunset shot of Aarav by the ocean, artistic and romantic feel, high quality digital sanctuary aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZ3hwo2yOqcPC3pO1xkl8tnn1anZsN7fkwsK7t9nRD-RxYxWYDM7FSvlPF3G8Tr66kIGXbXR71Vf-m5vyHsK1SbueFhLdz3i8GiMmFuc4NCwByH13V0_ZZLmqL_K_EVTTcrUBSbnC4hVeOVK8Yl7v5fHzmjqrNFOy_qYLMlhqyUgcKWUUq8qcG0rSD-7dPRUf5FRCinas2SZ57mAElTR1YYuEy7OzajN_lHYknuyF0kPuzVnW4DNHSFQ"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-bold rounded-lg">+2</div>
+</div>
+</div>
+</section>
+<!-- Profile Details Content -->
+<div class="px-container-margin space-y-stack-gap-lg mt-stack-gap-md">
+<!-- About Me -->
+<section class="bg-surface-container-low p-stack-gap-md rounded-xl shadow-[0px_4px_20px_rgba(45,41,38,0.04)]">
+<h3 class="font-headline-md text-headline-md text-primary mb-2">About Me</h3>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                    A tech enthusiast who finds balance in classical music and long mountain treks. I believe in a partnership built on mutual growth, intellectual curiosity, and shared values. Professionally, I lead a team of engineers at a global tech firm, but at heart, I'm a simple man who loves a good cup of filter coffee and quiet weekend mornings.
+                </p>
+<div class="flex flex-wrap gap-2 mt-4">
+<span class="bg-primary/5 text-primary px-3 py-1 rounded-full text-label-caps font-label-caps">Classical Music</span>
+<span class="bg-primary/5 text-primary px-3 py-1 rounded-full text-label-caps font-label-caps">Hiking</span>
+<span class="bg-primary/5 text-primary px-3 py-1 rounded-full text-label-caps font-label-caps">Tech</span>
+<span class="bg-primary/5 text-primary px-3 py-1 rounded-full text-label-caps font-label-caps">Cooking</span>
+</div>
+</section>
+<!-- Attributes Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-grid-gutter">
+<!-- Physical -->
+<div class="bg-white p-stack-gap-md rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary">accessibility_new</span>
+<h4 class="font-title-lg text-title-lg text-primary">Physical Attributes</h4>
+</div>
+<ul class="space-y-2 text-on-surface-variant font-body-sm text-body-sm">
+<li class="flex justify-between"><span>Height</span> <span class="font-bold">6'0" (182cm)</span></li>
+<li class="flex justify-between"><span>Weight</span> <span class="font-bold">78 kg</span></li>
+<li class="flex justify-between"><span>Body Type</span> <span class="font-bold">Athletic</span></li>
+<li class="flex justify-between"><span>Diet</span> <span class="font-bold">Vegetarian</span></li>
+</ul>
+</div>
+<!-- Education & Profession -->
+<div class="bg-white p-stack-gap-md rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary">work</span>
+<h4 class="font-title-lg text-title-lg text-primary">Work &amp; Education</h4>
+</div>
+<ul class="space-y-2 text-on-surface-variant font-body-sm text-body-sm">
+<li class="flex justify-between"><span>Education</span> <span class="font-bold">M.S. Computer Science</span></li>
+<li class="flex justify-between"><span>University</span> <span class="font-bold">IIT Bombay</span></li>
+<li class="flex justify-between"><span>Profession</span> <span class="font-bold">Software Architect</span></li>
+<li class="flex justify-between"><span>Income</span> <span class="font-bold">50L+ PA</span></li>
+</ul>
+</div>
+</section>
+<!-- Social Background -->
+<section class="bg-white p-stack-gap-md rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary">temple_hindu</span>
+<h4 class="font-title-lg text-title-lg text-primary">Religion &amp; Social</h4>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<ul class="space-y-2 text-on-surface-variant font-body-sm text-body-sm">
+<li class="flex flex-col"><span class="opacity-60">Religion</span> <span class="font-bold">Hindu</span></li>
+<li class="flex flex-col"><span class="opacity-60">Caste</span> <span class="font-bold">Brahmin</span></li>
+</ul>
+<ul class="space-y-2 text-on-surface-variant font-body-sm text-body-sm">
+<li class="flex flex-col"><span class="opacity-60">Mother Tongue</span> <span class="font-bold">Hindi</span></li>
+<li class="flex flex-col"><span class="opacity-60">Gothra</span> <span class="font-bold">Vatsa</span></li>
+</ul>
+</div>
+</section>
+<!-- Private Note -->
+<section class="bg-secondary-fixed/20 p-stack-gap-md rounded-xl border-2 border-dashed border-secondary-fixed">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-secondary-fixed">edit_note</span>
+<h4 class="font-title-lg text-title-lg text-on-secondary-fixed">Private Note</h4>
+</div>
+<span class="text-[10px] font-label-caps text-on-secondary-fixed-variant px-2 py-0.5 bg-secondary-fixed rounded">ONLY VISIBLE TO YOU</span>
+</div>
+<textarea class="w-full bg-transparent border-none focus:ring-0 font-body-lg text-body-lg p-0 text-on-secondary-fixed placeholder:text-on-secondary-fixed/40" id="private-note" placeholder="Tap to write a private note about this match (e.g. 'Met at the mixer', 'Discuss family values next')" rows="3"></textarea>
+</section>
+</div>
+</main>
+<!-- Floating Action Bar -->
+<div class="fixed bottom-0 left-0 right-0 p-container-margin z-40 md:max-w-2xl md:mx-auto">
+<div class="glass-card shadow-[0px_-4px_20px_rgba(45,41,38,0.1)] rounded-2xl p-3 flex items-center gap-3 border border-outline-variant/20">
+<!-- Shortlist Toggle -->
+<button class="p-3 rounded-xl border border-primary text-primary hover:bg-primary/5 transition-all active:scale-90 duration-150" onclick="toggleShortlist(this)">
+<span class="material-symbols-outlined" id="shortlist-icon">star</span>
+</button>
+<!-- Send Interest -->
+<button class="flex-1 bg-primary text-on-primary py-4 px-6 rounded-xl font-bold font-title-lg text-title-lg flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined">favorite</span>
+                Express Interest
+            </button>
+<!-- View Contact (Locked) -->
+<button class="p-3 rounded-xl bg-surface-variant text-on-surface-variant border border-outline/20 flex flex-col items-center justify-center active:scale-90 duration-150 relative overflow-hidden group" onclick="showCreditModal()">
+<span class="material-symbols-outlined">call</span>
+<span class="material-symbols-outlined absolute top-1 right-1 text-[12px] text-secondary font-bold" style="font-variation-settings: 'FILL' 1;">lock</span>
+</button>
+</div>
+</div>
+<!-- Credit Modal (Hidden) -->
+<div class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center hidden p-4 sm:items-center" id="credit-modal">
+<div class="bg-white rounded-2xl w-full max-w-sm p-stack-gap-lg shadow-2xl transform transition-transform animate-in slide-in-from-bottom duration-300">
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-headline-md text-headline-md text-primary">Unlock Contact</h3>
+<button class="text-on-surface-variant" onclick="hideCreditModal()"><span class="material-symbols-outlined">close</span></button>
+</div>
+<div class="text-center space-y-4">
+<div class="w-16 h-16 bg-secondary-fixed/30 rounded-full flex items-center justify-center mx-auto text-secondary">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">toll</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Unlocking contact details requires <span class="font-bold text-primary">5 Credits</span>. You currently have 12 credits remaining.</p>
+<button class="w-full bg-primary text-white py-4 rounded-xl font-bold hover:opacity-90 transition-opacity">Confirm &amp; Unlock</button>
+<p class="text-[10px] font-label-caps text-on-surface-variant/60">YOUR DETAILS WILL ALSO BE SHARED WITH AARAV</p>
+</div>
+</div>
+</div>
+<!-- Bottom Nav (Hidden on profile details as per UX mandate for focused task) -->
+<!-- The BottomNavBar and TopAppBar logic follows the "Destination Rule". Since this is a detailed profile view (sub-page), global nav is suppressed. -->
+<script>
+        function toggleShortlist(btn) {
+            const icon = btn.querySelector('#shortlist-icon');
+            if (icon.style.fontVariationSettings.includes("'FILL' 1")) {
+                icon.style.fontVariationSettings = "'FILL' 0";
+                btn.classList.remove('bg-primary/10');
+            } else {
+                icon.style.fontVariationSettings = "'FILL' 1";
+                btn.classList.add('bg-primary/10');
+            }
+        }
+
+        function showCreditModal() {
+            document.getElementById('credit-modal').classList.remove('hidden');
+        }
+
+        function hideCreditModal() {
+            document.getElementById('credit-modal').classList.add('hidden');
+        }
+
+        // Close modal on background click
+        document.getElementById('credit-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'credit-modal') hideCreditModal();
+        });
+
+        // Auto-save simulation for Private Note
+        let timeout = null;
+        document.getElementById('private-note').addEventListener('input', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                console.log('Saving note...');
+                // Visual feedback could go here
+            }, 1000);
+        });
+    </script>
+</body></html>
