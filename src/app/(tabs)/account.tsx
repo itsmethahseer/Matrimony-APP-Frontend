@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,14 +10,15 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api, removeToken } from '@/services/api';
 import { Colors } from '@/constants/theme';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Alert } from '../../utils/alert';
 
 interface MenuSummary {
   name: string;
@@ -40,6 +41,7 @@ export default function AccountScreen() {
   const [subModalVisible, setSubModalVisible] = useState(false);
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [supportModalVisible, setSupportModalVisible] = useState(false);
+  const [payModalVisible, setPayModalVisible] = useState(false);
   
   // Support data state
   const [supportData, setSupportData] = useState<any>(null);
@@ -47,6 +49,18 @@ export default function AccountScreen() {
   // Verification form state
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Payment mock states
+  const [selectedPlan, setSelectedPlan] = useState<'Silver' | 'Gold' | 'Platinum' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card'>('upi');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [upiTxId, setUpiTxId] = useState('');
+  const [isProcessingPay, setIsProcessingPay] = useState(false);
+  const [merchantUpiId, setMerchantUpiId] = useState('matrimonyapp@upi');
+  const [merchantName, setMerchantName] = useState('Matrimony Services');
 
   const router = useRouter();
 
@@ -57,6 +71,10 @@ export default function AccountScreen() {
       
       const me = await api.getMe();
       setUserData(me);
+
+      const config = await api.getPaymentConfig();
+      setMerchantUpiId(config.merchant_upi_id);
+      setMerchantName(config.merchant_name);
     } catch (error: any) {
       console.error(error);
     } finally {
@@ -64,47 +82,86 @@ export default function AccountScreen() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const handleLogout = async () => {
-    const logoutAction = async () => {
-      await removeToken();
-      router.replace('/login');
-    };
-
-    if (Platform.OS === 'web') {
-      const confirmLogout = window.confirm('Are you sure you want to log out of your session?');
-      if (confirmLogout) {
-        await logoutAction();
-      }
-    } else {
-      Alert.alert(
-        'Log Out',
-        'Are you sure you want to log out of your session?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Log Out', 
-            style: 'destructive',
-            onPress: logoutAction
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out of your session?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Log Out', 
+          style: 'destructive',
+          onPress: async () => {
+            await removeToken();
+            router.replace('/login');
           }
-        ]
-      );
+        }
+      ]
+    );
+  };
+
+  const getPlanPrice = (plan: 'Silver' | 'Gold' | 'Platinum') => {
+    if (plan === 'Silver') return 1499;
+    if (plan === 'Gold') return 2999;
+    return 5499;
+  };
+
+  const handleSelectPlan = (plan: 'Silver' | 'Gold' | 'Platinum') => {
+    setSelectedPlan(plan);
+    setSubModalVisible(false);
+    setPayModalVisible(true);
+    setPaymentMethod('upi');
+    setUpiTxId('');
+    // Preset mock details for easy testing
+    setCardNumber('4111 2222 3333 4444');
+    setCardExpiry('12/28');
+    setCardCvv('123');
+    setCardName('Test User');
+  };
+
+  const handleUpiPayIntent = async () => {
+    if (!selectedPlan) return;
+    const price = getPlanPrice(selectedPlan);
+    const upiUrl = `upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${price}&cu=INR&tn=${encodeURIComponent(selectedPlan + ' Plan Upgrade')}`;
+    
+    try {
+      const supported = await Linking.canOpenURL(upiUrl);
+      if (supported) {
+        await Linking.openURL(upiUrl);
+      } else {
+        if (Platform.OS === 'web') {
+          Alert.alert('Scan QR Code', 'Please scan the QR code using Google Pay, PhonePe, or Paytm on your mobile phone to complete payment.');
+        } else {
+          Alert.alert('No UPI App Found', 'Could not open any UPI app on this device. Please scan the QR code or use Card payment.');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'An error occurred opening the UPI application.');
     }
   };
 
-  const handleUpgrade = async (plan: 'Silver' | 'Gold' | 'Platinum') => {
-    setIsLoading(true);
-    setSubModalVisible(false);
+  const handleUpgrade = async () => {
+    if (!selectedPlan) return;
+    setIsProcessingPay(true);
     try {
-      await api.subscribePlan(plan);
-      Alert.alert('Subscription Upgraded', `Successfully upgraded to the ${plan} Plan!`);
+      // Simulate network request delay for realistic payment gateway loading
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      await api.subscribePlan(selectedPlan);
+      Alert.alert('Payment Successful', `Successfully processed payment and upgraded to the ${selectedPlan} Plan!`);
+      setPayModalVisible(false);
       loadData(); // Reload balances
     } catch (error: any) {
-      Alert.alert('Upgrade Failed', error.message || 'Upgrade transaction failed.');
-      setIsLoading(false);
+      Alert.alert('Payment Failed', error.message || 'Payment transaction failed.');
+    } finally {
+      setIsProcessingPay(false);
     }
   };
 
@@ -333,7 +390,7 @@ export default function AccountScreen() {
             
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
               {/* Plan 1: Silver */}
-              <TouchableOpacity style={styles.planCard} onPress={() => handleUpgrade('Silver')}>
+              <TouchableOpacity style={styles.planCard} onPress={() => handleSelectPlan('Silver')}>
                 <View style={styles.planHeader}>
                   <Text style={styles.planTitle}>Silver Plan</Text>
                   <Text style={styles.planPrice}>₹1,499 / mo</Text>
@@ -342,7 +399,7 @@ export default function AccountScreen() {
               </TouchableOpacity>
 
               {/* Plan 2: Gold */}
-              <TouchableOpacity style={[styles.planCard, styles.goldPlanCard]} onPress={() => handleUpgrade('Gold')}>
+              <TouchableOpacity style={[styles.planCard, styles.goldPlanCard]} onPress={() => handleSelectPlan('Gold')}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: '#735c00' }]}>Gold Plan</Text>
                   <Text style={[styles.planPrice, { color: '#735c00' }]}>₹2,999 / 3 mos</Text>
@@ -351,7 +408,7 @@ export default function AccountScreen() {
               </TouchableOpacity>
 
               {/* Plan 3: Platinum */}
-              <TouchableOpacity style={[styles.planCard, styles.platPlanCard]} onPress={() => handleUpgrade('Platinum')}>
+              <TouchableOpacity style={[styles.planCard, styles.platPlanCard]} onPress={() => handleSelectPlan('Platinum')}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: '#fff' }]}>Platinum Plan</Text>
                   <Text style={[styles.planPrice, { color: '#fff' }]}>₹5,499 / 6 mos</Text>
@@ -444,6 +501,187 @@ export default function AccountScreen() {
                 <ActivityIndicator size="large" color={Colors.light.primary} />
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 4: Payment Checkout */}
+      <Modal visible={payModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Payment Checkout</Text>
+              <TouchableOpacity onPress={() => setPayModalVisible(false)} disabled={isProcessingPay}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.checkoutSummaryCard}>
+                <Text style={styles.checkoutSummaryLabel}>SELECTED PLAN</Text>
+                <Text style={styles.checkoutSummaryPlan}>{selectedPlan} Plan</Text>
+                <Text style={styles.checkoutSummaryPrice}>
+                  {selectedPlan === 'Silver' && '₹1,499'}
+                  {selectedPlan === 'Gold' && '₹2,999'}
+                  {selectedPlan === 'Platinum' && '₹5,499'}
+                </Text>
+              </View>
+
+              {/* Payment Method Selector Tabs */}
+              <View style={styles.paymentTabsContainer}>
+                <TouchableOpacity 
+                  style={[styles.paymentTab, paymentMethod === 'upi' && styles.activePaymentTab]}
+                  onPress={() => setPaymentMethod('upi')}
+                  disabled={isProcessingPay}
+                >
+                  <Ionicons name="qr-code-outline" size={18} color={paymentMethod === 'upi' ? Colors.light.primary : Colors.light.textSecondary} />
+                  <Text style={[styles.paymentTabLabel, paymentMethod === 'upi' && styles.activePaymentTabLabel]}>
+                    UPI (0% Fee)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.paymentTab, paymentMethod === 'card' && styles.activePaymentTab]}
+                  onPress={() => setPaymentMethod('card')}
+                  disabled={isProcessingPay}
+                >
+                  <Ionicons name="card-outline" size={18} color={paymentMethod === 'card' ? Colors.light.primary : Colors.light.textSecondary} />
+                  <Text style={[styles.paymentTabLabel, paymentMethod === 'card' && styles.activePaymentTabLabel]}>
+                    Card Payment
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {paymentMethod === 'upi' ? (
+                <View style={styles.upiContainer}>
+                  <Text style={styles.upiInstructions}>
+                    Pay securely using any UPI app (GPay, PhonePe, Paytm, BHIM) with **zero transaction fees**.
+                  </Text>
+
+                  {/* QR Code section */}
+                  <View style={styles.qrCodeContainer}>
+                    <Image 
+                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${selectedPlan ? getPlanPrice(selectedPlan) : 0}&cu=INR&tn=${selectedPlan}%20Upgrade`)}` }} 
+                      style={styles.qrCodeImage} 
+                    />
+                    <Text style={styles.qrCodeSubtext}>Scan this QR code to pay instantly</Text>
+                  </View>
+
+                  {/* Mobile Direct Pay Button */}
+                  {Platform.OS !== 'web' && (
+                    <TouchableOpacity 
+                      style={styles.upiDirectPayBtn}
+                      onPress={handleUpiPayIntent}
+                      disabled={isProcessingPay}
+                    >
+                      <Ionicons name="flash-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={styles.upiDirectPayBtnText}>Open Installed UPI App</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <Text style={styles.inputLabel}>UPI TRANSACTION ID / UTR (OPTIONAL)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={upiTxId}
+                    onChangeText={setUpiTxId}
+                    placeholder="Enter 12-digit transaction Ref No"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={12}
+                    editable={!isProcessingPay}
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.payNowBtn, { backgroundColor: isProcessingPay ? '#9ca3af' : Colors.light.primary }]}
+                    onPress={handleUpgrade}
+                    disabled={isProcessingPay}
+                  >
+                    {isProcessingPay ? (
+                      <View style={styles.payBtnLoadingRow}>
+                        <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.payNowBtnText}>Verifying Payment...</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.payNowBtnText}>I Have Paid - Activate Plan</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.cardContainer}>
+                  <Text style={styles.paymentSectionHeader}>Card Details</Text>
+
+                  <Text style={styles.inputLabel}>CARDHOLDER NAME</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={cardName}
+                    onChangeText={setCardName}
+                    placeholder="Name on card"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    editable={!isProcessingPay}
+                  />
+
+                  <Text style={styles.inputLabel}>CARD NUMBER</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={cardNumber}
+                    onChangeText={setCardNumber}
+                    placeholder="4111 2222 3333 4444"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="numeric"
+                    maxLength={19}
+                    editable={!isProcessingPay}
+                  />
+
+                  <View style={styles.rowInputs}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.inputLabel}>EXPIRY DATE</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={cardExpiry}
+                        onChangeText={setCardExpiry}
+                        placeholder="MM/YY"
+                        placeholderTextColor={Colors.light.textSecondary}
+                        maxLength={5}
+                        editable={!isProcessingPay}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>CVV</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={cardCvv}
+                        onChangeText={setCardCvv}
+                        placeholder="123"
+                        placeholderTextColor={Colors.light.textSecondary}
+                        keyboardType="numeric"
+                        maxLength={4}
+                        secureTextEntry
+                        editable={!isProcessingPay}
+                      />
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.payNowBtn, { backgroundColor: isProcessingPay ? '#9ca3af' : Colors.light.primary }]}
+                    onPress={handleUpgrade}
+                    disabled={isProcessingPay || !cardNumber || !cardExpiry || !cardCvv || !cardName}
+                  >
+                    {isProcessingPay ? (
+                      <View style={styles.payBtnLoadingRow}>
+                        <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.payNowBtnText}>Processing Secure Payment...</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.payNowBtnText}>Pay & Activate Plan</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <Text style={styles.secureNotice}>
+                🔒 Secure SSL encrypted transaction connection.
+              </Text>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -810,5 +1048,177 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     marginTop: 6,
     lineHeight: 18,
+  },
+  checkoutSummaryCard: {
+    backgroundColor: '#f7f6f5',
+    borderWidth: 1,
+    borderColor: '#e9e1dc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  checkoutSummaryLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.light.textSecondary,
+    letterSpacing: 1,
+  },
+  checkoutSummaryPlan: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginTop: 4,
+  },
+  checkoutSummaryPrice: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+    marginTop: 8,
+  },
+  paymentSectionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: 16,
+    marginTop: 10,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.light.textSecondary,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  paymentInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#e9e1dc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    color: Colors.light.text,
+    backgroundColor: '#fff',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  payNowBtn: {
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  payNowBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  payBtnLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secureNotice: {
+    textAlign: 'center',
+    color: Colors.light.textSecondary,
+    fontSize: 12,
+    marginTop: 16,
+    marginBottom: 30,
+  },
+  paymentTabsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  paymentTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e9e1dc',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    gap: 6,
+  },
+  activePaymentTab: {
+    borderColor: Colors.light.primary,
+    backgroundColor: 'rgba(115, 92, 0, 0.04)',
+  },
+  paymentTabLabel: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    fontWeight: '500',
+  },
+  activePaymentTabLabel: {
+    color: Colors.light.primary,
+    fontWeight: 'bold',
+  },
+  upiContainer: {
+    gap: 12,
+  },
+  upiInstructions: {
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  qrCodeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e9e1dc',
+    borderRadius: 12,
+    padding: 20,
+    marginHorizontal: 30,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  qrCodeImage: {
+    width: 180,
+    height: 180,
+    resizeMode: 'contain',
+  },
+  qrCodeSubtext: {
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  upiDirectPayBtn: {
+    backgroundColor: '#0070e0',
+    height: 48,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#0070e0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  upiDirectPayBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  cardContainer: {
+    gap: 12,
   },
 });

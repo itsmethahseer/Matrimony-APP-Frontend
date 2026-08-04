@@ -12,12 +12,12 @@ import {
   Modal,
   Dimensions,
   Platform,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
 import { Colors } from '@/constants/theme';
+import { Alert } from '../../utils/alert';
 
 const { width } = Dimensions.get('window');
 

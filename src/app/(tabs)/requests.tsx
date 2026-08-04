@@ -8,13 +8,13 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import { Alert } from '../../utils/alert';
 
 interface RequestInterest {
   id: number;

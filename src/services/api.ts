@@ -8,11 +8,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const getBaseUrl = () => {
   // For web development:
   if (Platform.OS === 'web') {
-    return 'http://localhost:8000';
+    return 'http://localhost:8002';
   }
   // For mobile development (both simulator and physical devices on local network):
   // Using your host IP 192.168.29.199 as shown in your Metro bundler output
-  return 'http://192.168.29.199:8000';
+  return 'http://192.168.29.199:8002';
 };
 
 export const API_URL = getBaseUrl();
@@ -238,4 +238,6 @@ export const api = {
   getNotifications: () => apiRequest('GET', '/api/menu/notifications'),
   
   getSupport: () => apiRequest('GET', '/api/menu/support'),
+  
+  getPaymentConfig: () => apiRequest<{ merchant_upi_id: string; merchant_name: string }>('GET', '/api/menu/payment-config'),
 };
