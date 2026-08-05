@@ -20,6 +20,16 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from '../../utils/alert';
 
+const RELIGION_CASTE_MAP: Record<string, string[]> = {
+  Islam: ['Sunni', 'Shia', 'Deobandi', 'Barelvi', 'Ahmadiyya', 'Other'],
+  Hinduism: ['Brahmin', 'Kshatriya', 'Vaishya', 'Shudra', 'Maratha', 'Rajput', 'Kayastha', 'Nair', 'Ezhava', 'Yadav', 'Other'],
+  Christianity: ['Catholic', 'Protestant', 'Orthodox', 'Pentecostal', 'Syrian Christian', 'Other'],
+  Sikhism: ['Jat Sikh', 'Ramgarhia', 'Khatri', 'Arora', 'Ahluwalia', 'Other'],
+  Buddhism: ['Theravada', 'Mahayana', 'Vajrayana', 'Other'],
+  Jainism: ['Digambara', 'Shvetambara', 'Other'],
+  Other: ['General', 'Other'],
+};
+
 interface MenuSummary {
   name: string;
   user_id: number;
@@ -75,6 +85,24 @@ export default function AccountScreen() {
   const [editWeight, setEditWeight] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
+
+  // Manage Photos & DP Modal States
+  const [photosModalVisible, setPhotosModalVisible] = useState(false);
+  const [photosList, setPhotosList] = useState<any[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+
+  // Religion, Caste, Sub-Caste & Partner Preferences Modal States
+  const [prefModalVisible, setPrefModalVisible] = useState(false);
+  const [editReligion, setEditReligion] = useState('Islam');
+  const [editCaste, setEditCaste] = useState('Sunni');
+  const [editSubCaste, setEditSubCaste] = useState('');
+  const [editPartnerReligion, setEditPartnerReligion] = useState('Islam');
+  const [editPartnerCaste, setEditPartnerCaste] = useState('Sunni');
+  const [editPartnerSubCaste, setEditPartnerSubCaste] = useState('');
+  const [editPartnerAgeMin, setEditPartnerAgeMin] = useState('18');
+  const [editPartnerAgeMax, setEditPartnerAgeMax] = useState('40');
+  const [isSavingPref, setIsSavingPref] = useState(false);
 
   const router = useRouter();
 
@@ -239,6 +267,148 @@ export default function AccountScreen() {
     }
   };
 
+  // --- Photo & DP Manager Functions ---
+  const openPhotosModal = async () => {
+    setIsLoading(true);
+    try {
+      const photos = await api.getPhotos();
+      setPhotosList(photos);
+      setPhotosModalVisible(true);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not fetch user photos.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSetMainPhoto = async (photoId: number) => {
+    try {
+      await api.setMainPhoto(photoId);
+      Alert.alert('Success', 'Main profile photo (DP) updated successfully!');
+      const updatedPhotos = await api.getPhotos();
+      setPhotosList(updatedPhotos);
+      loadData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not set main photo.');
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: number) => {
+    try {
+      await api.deletePhoto(photoId);
+      Alert.alert('Photo Deleted', 'Photo has been removed from your gallery.');
+      const updatedPhotos = await api.getPhotos();
+      setPhotosList(updatedPhotos);
+      loadData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not delete photo.');
+    }
+  };
+
+  const handlePickAndUploadPhoto = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Denied', 'Permission to access media library is required.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setIsUploadingPhoto(true);
+        const asset = result.assets[0];
+        const isFirst = photosList.length === 0;
+        await api.uploadPhoto(asset.uri, isFirst);
+        Alert.alert('Success', 'Photo uploaded successfully!');
+        const updatedPhotos = await api.getPhotos();
+        setPhotosList(updatedPhotos);
+        loadData();
+      }
+    } catch (error: any) {
+      Alert.alert('Upload Error', error.message || 'Could not upload photo.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleAddPhotoByUrl = async () => {
+    if (!newPhotoUrl.trim()) return;
+    setIsUploadingPhoto(true);
+    try {
+      const isFirst = photosList.length === 0;
+      await api.uploadPhoto(newPhotoUrl.trim(), isFirst);
+      setNewPhotoUrl('');
+      Alert.alert('Success', 'Photo uploaded from URL!');
+      const updatedPhotos = await api.getPhotos();
+      setPhotosList(updatedPhotos);
+      loadData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to add photo URL.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  // --- Dynamic Religion, Caste & Partner Preference Functions ---
+  const openPrefModal = async () => {
+    setIsLoading(true);
+    try {
+      const profile = await api.getMyProfile();
+      setEditReligion(profile.religion || 'Islam');
+      setEditCaste(profile.caste || profile.sect || 'Sunni');
+      setEditSubCaste(profile.sub_caste || '');
+
+      setEditPartnerReligion(Array.isArray(profile.partner_religion) ? profile.partner_religion.join(', ') : (profile.partner_religion || 'Islam'));
+      setEditPartnerCaste(Array.isArray(profile.partner_caste) ? profile.partner_caste.join(', ') : (profile.partner_caste || 'Sunni'));
+      setEditPartnerSubCaste(Array.isArray(profile.partner_sub_caste) ? profile.partner_sub_caste.join(', ') : (profile.partner_sub_caste || ''));
+
+      setEditPartnerAgeMin(profile.partner_age_min ? String(profile.partner_age_min) : '18');
+      setEditPartnerAgeMax(profile.partner_age_max ? String(profile.partner_age_max) : '40');
+
+      setPrefModalVisible(true);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not load preferences.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    setIsSavingPref(true);
+    try {
+      const partnerReligionArr = editPartnerReligion.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerCasteArr = editPartnerCaste.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerSubCasteArr = editPartnerSubCaste.split(',').map((s) => s.trim()).filter(Boolean);
+
+      const updatePayload = {
+        religion: editReligion,
+        sect: editCaste,
+        caste: editCaste,
+        sub_caste: editSubCaste.trim(),
+        partner_religion: partnerReligionArr,
+        partner_caste: partnerCasteArr,
+        partner_sub_caste: partnerSubCasteArr,
+        partner_age_min: parseInt(editPartnerAgeMin) || 18,
+        partner_age_max: parseInt(editPartnerAgeMax) || 70,
+      };
+
+      await api.updateMyProfile(updatePayload);
+      Alert.alert('Success', 'Religion, Caste & Partner Preferences saved!');
+      setPrefModalVisible(false);
+      loadData();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not save preferences.');
+    } finally {
+      setIsSavingPref(false);
+    }
+  };
+
   const handlePickDocument = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -343,14 +513,34 @@ export default function AccountScreen() {
         
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={openPhotosModal} activeOpacity={0.8}>
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             {isVerified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark-circle" size={18} color="#fff" />
               </View>
             )}
-          </View>
+            <View style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              backgroundColor: Colors.light.primary,
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderWidth: 2,
+              borderColor: '#fff',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 3,
+              elevation: 4,
+            }}>
+              <Ionicons name="camera" size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.profileName}>{summary.name}</Text>
           <Text style={styles.profileId}>ID: SM-{summary.user_id}</Text>
         </View>
@@ -403,10 +593,32 @@ export default function AccountScreen() {
 
         {/* Navigation Options List */}
         <View style={styles.menuContainer}>
+          <TouchableOpacity style={styles.menuItem} onPress={openPhotosModal}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="images-outline" size={22} color={Colors.light.primary} />
+              <View>
+                <Text style={styles.menuItemText}>Manage Photos & Profile DP</Text>
+                <Text style={styles.menuItemSubtext}>Upload photos, set main DP & manage gallery</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={openPrefModal}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="heart-outline" size={22} color={Colors.light.primary} />
+              <View>
+                <Text style={styles.menuItemText}>Religion, Caste & Partner Prefs</Text>
+                <Text style={styles.menuItemSubtext}>Set dynamic religion, caste, sub-caste & expectations</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={openEditProfile}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="create-outline" size={22} color={Colors.light.primary} />
-              <Text style={styles.menuItemText}>Edit Profile</Text>
+              <Text style={styles.menuItemText}>Edit Profile Details</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
@@ -905,6 +1117,240 @@ export default function AccountScreen() {
                   </View>
                 ) : (
                   <Text style={styles.payNowBtnText}>Save Profile Details</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 6: Manage Photos & Set DP */}
+      <Modal visible={photosModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Manage Photos & DP</Text>
+              <TouchableOpacity onPress={() => setPhotosModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.alertText}>
+                Upload photos to your profile gallery. Select any photo to set as your **Main Profile DP**.
+              </Text>
+
+              {/* Upload Controls */}
+              <View style={{ flexDirection: 'row', gap: 10, marginVertical: 15 }}>
+                <TouchableOpacity
+                  style={[styles.verifyInput, { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', borderStyle: 'dashed', height: 75 }]}
+                  onPress={handlePickAndUploadPhoto}
+                  disabled={isUploadingPhoto}
+                >
+                  <Ionicons name="camera-outline" size={26} color={Colors.light.primary} />
+                  <Text style={{ fontSize: 13, color: Colors.light.primary, fontWeight: 'bold', marginTop: 4 }}>
+                    {isUploadingPhoto ? 'Uploading...' : 'Pick Image from Device'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.inputLabel}>OR ADD PHOTO BY URL</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                <TextInput
+                  style={[styles.paymentInput, { flex: 1, marginBottom: 0 }]}
+                  value={newPhotoUrl}
+                  onChangeText={setNewPhotoUrl}
+                  placeholder="https://images.unsplash.com/..."
+                  placeholderTextColor={Colors.light.textSecondary}
+                />
+                <TouchableOpacity
+                  style={{ backgroundColor: Colors.light.primary, paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}
+                  onPress={handleAddPhotoByUrl}
+                  disabled={isUploadingPhoto || !newPhotoUrl.trim()}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Add</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Photo List Grid */}
+              <Text style={styles.faqHeader}>YOUR UPLOADS ({photosList.length})</Text>
+              {photosList.length === 0 ? (
+                <View style={{ padding: 30, alignItems: 'center' }}>
+                  <Ionicons name="images-outline" size={40} color={Colors.light.textSecondary} />
+                  <Text style={{ color: Colors.light.textSecondary, marginTop: 8 }}>No photos uploaded yet.</Text>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 40 }}>
+                  {photosList.map((photo: any) => (
+                    <View key={photo.id} style={{ width: '47%', backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: photo.is_main ? 2 : 1, borderColor: photo.is_main ? Colors.light.primary : '#eee', elevation: 2 }}>
+                      <Image source={{ uri: photo.url }} style={{ width: '100%', height: 160, resizeMode: 'cover' }} />
+                      {photo.is_main && (
+                        <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: Colors.light.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>★ MAIN DP</Text>
+                        </View>
+                      )}
+                      <View style={{ padding: 8, gap: 6, backgroundColor: '#fdfbf7' }}>
+                        {!photo.is_main && (
+                          <TouchableOpacity
+                            style={{ backgroundColor: Colors.light.primary, paddingVertical: 6, borderRadius: 6, alignItems: 'center' }}
+                            onPress={() => handleSetMainPhoto(photo.id)}
+                          >
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Set as Main DP</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#ffdada', paddingVertical: 6, borderRadius: 6, alignItems: 'center' }}
+                          onPress={() => handleDeletePhoto(photo.id)}
+                        >
+                          <Text style={{ color: Colors.light.error, fontSize: 11, fontWeight: 'bold' }}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 7: Religion, Caste & Partner Preferences */}
+      <Modal visible={prefModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Religion, Caste & Preferences</Text>
+              <TouchableOpacity onPress={() => setPrefModalVisible(false)} disabled={isSavingPref}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+              <Text style={[styles.faqHeader, { marginTop: 0 }]}>MY RELIGION & CASTE DETAILS</Text>
+
+              {/* Religion Selector */}
+              <Text style={styles.inputLabel}>RELIGION</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {Object.keys(RELIGION_CASTE_MAP).map((rel) => (
+                  <TouchableOpacity
+                    key={rel}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: editReligion === rel ? Colors.light.primary : '#f3f4f6',
+                    }}
+                    onPress={() => {
+                      setEditReligion(rel);
+                      const defaultCastes = RELIGION_CASTE_MAP[rel] || ['Other'];
+                      setEditCaste(defaultCastes[0]);
+                    }}
+                  >
+                    <Text style={{ color: editReligion === rel ? '#fff' : Colors.light.text, fontSize: 13, fontWeight: editReligion === rel ? 'bold' : 'normal' }}>
+                      {rel}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Caste / Sect Selector (Dynamically changes based on Religion) */}
+              <Text style={styles.inputLabel}>CASTE / SECT (DYNAMIC FOR {editReligion.toUpperCase()})</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {(RELIGION_CASTE_MAP[editReligion] || ['Other']).map((casteOpt) => (
+                  <TouchableOpacity
+                    key={casteOpt}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      backgroundColor: editCaste === casteOpt ? Colors.light.secondaryContainer : '#f3f4f6',
+                    }}
+                    onPress={() => setEditCaste(casteOpt)}
+                  >
+                    <Text style={{ color: editCaste === casteOpt ? Colors.light.onSecondaryContainer : Colors.light.text, fontSize: 12, fontWeight: editCaste === casteOpt ? 'bold' : 'normal' }}>
+                      {casteOpt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Sub-Caste Input */}
+              <Text style={styles.inputLabel}>SUB-CASTE / DENOMINATION</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editSubCaste}
+                onChangeText={setEditSubCaste}
+                placeholder="e.g. Mudaliar, Pillai, Iyer, Shafi'i, Kanthapuram, etc."
+                placeholderTextColor={Colors.light.textSecondary}
+              />
+
+              <Text style={[styles.faqHeader, { marginTop: 20 }]}>PARTNER PREFERENCES</Text>
+
+              {/* Partner Religion Preference */}
+              <Text style={styles.inputLabel}>PREFERRED PARTNER RELIGION</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editPartnerReligion}
+                onChangeText={setEditPartnerReligion}
+                placeholder="e.g. Islam, Hinduism, Any"
+                placeholderTextColor={Colors.light.textSecondary}
+              />
+
+              {/* Partner Caste Preference */}
+              <Text style={styles.inputLabel}>PREFERRED PARTNER CASTE / SECT</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editPartnerCaste}
+                onChangeText={setEditPartnerCaste}
+                placeholder="e.g. Sunni, Brahmin, Open to All"
+                placeholderTextColor={Colors.light.textSecondary}
+              />
+
+              {/* Partner Sub-Caste Preference */}
+              <Text style={styles.inputLabel}>PREFERRED PARTNER SUB-CASTE</Text>
+              <TextInput
+                style={styles.paymentInput}
+                value={editPartnerSubCaste}
+                onChangeText={setEditPartnerSubCaste}
+                placeholder="e.g. Any, Specific Sub-caste"
+                placeholderTextColor={Colors.light.textSecondary}
+              />
+
+              {/* Partner Age Range */}
+              <View style={styles.rowInputs}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.inputLabel}>MIN AGE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPartnerAgeMin}
+                    onChangeText={setEditPartnerAgeMin}
+                    keyboardType="numeric"
+                    placeholder="18"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>MAX AGE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPartnerAgeMax}
+                    onChangeText={setEditPartnerAgeMax}
+                    keyboardType="numeric"
+                    placeholder="40"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.payNowBtn, { backgroundColor: isSavingPref ? '#9ca3af' : Colors.light.primary, marginBottom: 40 }]}
+                onPress={handleSavePreferences}
+                disabled={isSavingPref}
+              >
+                {isSavingPref ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.payNowBtnText}>Save Preferences</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>

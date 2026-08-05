@@ -176,6 +176,9 @@ export const api = {
   uploadPhoto: (url: string, isMain: boolean = false) => 
     apiRequest('POST', '/api/profiles/photos', { url, is_main: isMain }),
     
+  setMainPhoto: (id: number) => 
+    apiRequest('PUT', `/api/profiles/photos/${id}/set-main`),
+
   deletePhoto: (id: number) => apiRequest('DELETE', `/api/profiles/photos/${id}`),
 
   // Explore / Interactions
