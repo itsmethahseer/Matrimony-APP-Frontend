@@ -19,32 +19,40 @@ export default function RootLayout() {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertButtons, setAlertButtons] = useState<AlertButton[]>([]);
 
-  // Check login status and handle routing redirects reactively on screen transitions
+  // Check login status & handle auth navigation dynamically whenever segments change
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuthAndRedirect = async () => {
       try {
         const token = await AsyncStorage.getItem('user_token');
         const isAuth = !!token;
-        setIsAuthenticated(isAuth);
 
-        const inAuthGroup = segments[0] === 'login';
+        if (isMounted) {
+          setIsAuthenticated(isAuth);
+          setIsLoading(false);
 
-        if (!isAuth && !inAuthGroup) {
-          // Redirect to login if not authenticated
-          router.replace('/login');
-        } else if (isAuth && inAuthGroup) {
-          // Redirect to home tabs if already authenticated
-          router.replace('/(tabs)');
+          const inAuthGroup = segments[0] === 'login';
+
+          if (!isAuth && !inAuthGroup) {
+            router.replace('/login');
+          } else if (isAuth && inAuthGroup) {
+            router.replace('/(tabs)');
+          }
         }
       } catch (e) {
-        setIsAuthenticated(false);
-        router.replace('/login');
-      } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          router.replace('/login');
+        }
       }
     };
     
     checkAuthAndRedirect();
+    return () => {
+      isMounted = false;
+    };
   }, [segments]);
 
   // Register Alert Listener for custom modals on Web
@@ -57,14 +65,6 @@ export default function RootLayout() {
     });
   }, []);
 
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.light.background }}>
-        <ActivityIndicator size="large" color={Colors.light.primary} />
-      </View>
-    );
-  }
-
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={{ flex: 1 }}>
@@ -73,6 +73,22 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
           <Stack.Screen name="profile/[id]" options={{ presentation: 'card', headerShown: false }} />
         </Stack>
+
+        {isLoading && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: Colors.light.background,
+            zIndex: 999,
+          }}>
+            <ActivityIndicator size="large" color={Colors.light.primary} />
+          </View>
+        )}
 
         {/* Global Custom Alert Modal for Web */}
         <Modal visible={alertVisible} transparent animationType="fade">

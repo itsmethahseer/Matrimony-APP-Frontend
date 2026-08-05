@@ -1,18 +1,26 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 // Base URL detection
-// - iOS Simulator uses localhost
-// - Android Emulator uses 10.0.2.2
-// - Physical device should use your computer's local IP address (e.g. 192.168.1.100)
+// - Web development uses localhost:8000
+// - Mobile development (Simulator, Expo Go, physical device) dynamically resolves host IP address
 const getBaseUrl = () => {
-  // For web development:
   if (Platform.OS === 'web') {
-    return 'http://localhost:8002';
+    return 'http://localhost:8000';
   }
-  // For mobile development (both simulator and physical devices on local network):
-  // Using your host IP 192.168.29.199 as shown in your Metro bundler output
-  return 'http://192.168.29.199:8002';
+  
+  // Extract host IP dynamically from Expo debugger/host URI when running in Expo Go / Dev Client
+  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+  if (hostUri) {
+    const hostIp = hostUri.split(':')[0];
+    if (hostIp) {
+      return `http://${hostIp}:8000`;
+    }
+  }
+
+  // Fallback local IP for physical devices / emulators on local Wi-Fi
+  return 'http://192.168.0.109:8000';
 };
 
 export const API_URL = getBaseUrl();
