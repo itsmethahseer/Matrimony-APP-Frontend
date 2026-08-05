@@ -91,10 +91,34 @@ async function apiRequest<T = any>(
     return null as any;
   }
 
-  const resBody = await response.json();
-  
+  const responseText = await response.text();
+  let resBody: any = null;
+
+  if (responseText && responseText.trim().length > 0) {
+    try {
+      resBody = JSON.parse(responseText);
+    } catch (e) {
+      console.warn(`Non-JSON response received for ${method} ${path}:`, responseText);
+      if (!response.ok) {
+        const cleanText = responseText.replace(/<[^>]*>?/gm, '').trim();
+        throw new Error(`Server Error (${response.status}): ${cleanText.substring(0, 150)}`);
+      }
+      return responseText as any;
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(resBody.detail || 'Network request failed');
+    let errorMsg = 'Network request failed';
+    if (resBody) {
+      if (typeof resBody.detail === 'string') {
+        errorMsg = resBody.detail;
+      } else if (Array.isArray(resBody.detail)) {
+        errorMsg = resBody.detail.map((err: any) => err.msg || err.detail || JSON.stringify(err)).join(', ');
+      } else if (resBody.message) {
+        errorMsg = resBody.message;
+      }
+    }
+    throw new Error(errorMsg);
   }
 
   return resBody;
@@ -143,9 +167,20 @@ export const api = {
       body: formData,
     });
 
-    const resBody = await response.json();
+    const responseText = await response.text();
+    let resBody: any = null;
+    if (responseText && responseText.trim().length > 0) {
+      try {
+        resBody = JSON.parse(responseText);
+      } catch (e) {
+        if (!response.ok) {
+          throw new Error(`Upload Failed (${response.status}): ${responseText.replace(/<[^>]*>?/gm, '').substring(0, 100)}`);
+        }
+      }
+    }
+
     if (!response.ok) {
-      throw new Error(resBody.detail || 'File upload failed');
+      throw new Error(resBody?.detail || 'File upload failed');
     }
     return resBody;
   },
