@@ -86,6 +86,75 @@ export default function AccountScreen() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
 
+  // Categorized Edit Profile States
+  const [activeEditTab, setActiveEditTab] = useState<'basic' | 'marriage' | 'contact' | 'education' | 'location' | 'questionnaire' | 'religious' | 'physical' | 'family' | 'lifestyle' | 'partner'>('basic');
+  const [editTagline, setEditTagline] = useState('');
+  const [editProfileDesc, setEditProfileDesc] = useState('');
+  const [editGender, setEditGender] = useState('Male');
+  const [editMaritalStatus, setEditMaritalStatus] = useState('Never Married');
+  const [editProfileCreatedFor, setEditProfileCreatedFor] = useState('Self');
+
+  // Marriage Goals & Intros
+  const [editMarriageGoals, setEditMarriageGoals] = useState('');
+  const [editMarriagePlan, setEditMarriagePlan] = useState('');
+  const [editVoiceIntroUrl, setEditVoiceIntroUrl] = useState('');
+  const [editVideoIntroUrl, setEditVideoIntroUrl] = useState('');
+  const [editFutureChildren, setEditFutureChildren] = useState('');
+
+  // Contact Details
+  const [editPrimaryNo, setEditPrimaryNo] = useState('');
+  const [editSecondaryNo, setEditSecondaryNo] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editWhatsappNo, setEditWhatsappNo] = useState('');
+  const [editContactPerson, setEditContactPerson] = useState('');
+  const [editFullAddress, setEditFullAddress] = useState('');
+  const [editPreferredContact, setEditPreferredContact] = useState('');
+  const [editBestTimeToCall, setEditBestTimeToCall] = useState('');
+
+  // Education & Profession
+  const [editUniversity, setEditUniversity] = useState('');
+  const [editJobTitle, setEditJobTitle] = useState('');
+  const [editCompanyName, setEditCompanyName] = useState('');
+  const [editJobExp, setEditJobExp] = useState('');
+
+  // Location & Origin
+  const [editPresentState, setEditPresentState] = useState('');
+  const [editPresentCountry, setEditPresentCountry] = useState('India');
+  const [editResLocation, setEditResLocation] = useState('');
+  const [editHomeLocation, setEditHomeLocation] = useState('');
+  const [editGrewUpIn, setEditGrewUpIn] = useState('');
+  const [editRelocate, setEditRelocate] = useState('Yes');
+
+  // Questionnaires
+  const PREDEFINED_QUESTIONS = [
+    "What are your core goals for marriage?",
+    "What are your career expectations after marriage?",
+    "How do you balance family and work life?",
+    "What are your views on joint family living?",
+    "What qualities do you value most in a life partner?"
+  ];
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
+
+  // Physical & Appearance
+  const [editSkinColor, setEditSkinColor] = useState('');
+  const [editBloodGroup, setEditBloodGroup] = useState('');
+  const [editBodyType, setEditBodyType] = useState('');
+
+  // Family & Living
+  const [editFamilyType, setEditFamilyType] = useState('');
+  const [editFatherName, setEditFatherName] = useState('');
+  const [editMotherName, setEditMotherName] = useState('');
+
+  // Interests & Lifestyle
+  const [editInterests, setEditInterests] = useState('');
+  const [editPersonality, setEditPersonality] = useState('');
+  const [editEatingHabit, setEditEatingHabit] = useState('');
+  const [editSmokingHabit, setEditSmokingHabit] = useState('');
+  const [editDrinkingHabit, setEditDrinkingHabit] = useState('');
+
+  // Partner Expectations
+  const [editPartnerExpectation, setEditPartnerExpectation] = useState('');
+
   // Manage Photos & DP Modal States
   const [photosModalVisible, setPhotosModalVisible] = useState(false);
   const [photosList, setPhotosList] = useState<any[]>([]);
@@ -215,14 +284,84 @@ export default function AccountScreen() {
     try {
       const profile = await api.getMyProfile();
       setEditName(profile.name || '');
-      setEditAge(profile.age ? profile.age.toString() : '');
-      setEditLocation(profile.present_location || '');
-      setEditProfession(profile.profession || '');
+      setEditAge(profile.age ? profile.age.toString() : '25');
+      setEditGender(profile.gender || 'Male');
+      setEditMaritalStatus(profile.marital_status || 'Never Married');
+      setEditProfileCreatedFor(profile.profile_created_for || 'Self');
+      setEditTagline(profile.tagline || '');
+      setEditProfileDesc(profile.profile_description || '');
       setEditAbout(profile.about || '');
+
+      setEditMarriageGoals(profile.marriage_goals || '');
+      setEditMarriagePlan(profile.marriage_plan || '');
+      setEditVoiceIntroUrl(profile.voice_intro_url || '');
+      setEditVideoIntroUrl(profile.video_intro_url || '');
+      setEditFutureChildren(profile.future_children_plans || '');
+
+      setEditPrimaryNo(profile.primary_no || '');
+      setEditSecondaryNo(profile.secondary_no || '');
+      setEditEmail(profile.email || '');
+      setEditWhatsappNo(profile.whatsapp_no || '');
+      setEditContactPerson(profile.contact_person || '');
+      setEditFullAddress(profile.full_address || '');
+      setEditPreferredContact(profile.preferred_contact_method || 'Phone Call');
+      setEditBestTimeToCall(profile.best_time_to_call || 'Evening 6-9 PM');
+
       setEditEducation(profile.education || '');
+      setEditUniversity(profile.university_or_college || '');
+      setEditProfession(profile.profession || '');
+      setEditJobTitle(profile.job_title_or_role || '');
+      setEditCompanyName(profile.company_name || '');
+      setEditJobExp(profile.job_experience || '');
       setEditIncome(profile.annual_income ? profile.annual_income.toString() : '');
+
+      setEditLocation(profile.present_location || '');
+      setEditPresentState(profile.present_state || '');
+      setEditPresentCountry(profile.present_country || 'India');
+      setEditResLocation(profile.residential_location || '');
+      setEditHomeLocation(profile.home_location || '');
+      setEditGrewUpIn(profile.grew_up_in || '');
+      setEditRelocate(profile.willing_to_relocate || 'Yes');
+
+      setEditReligion(profile.religion || 'Islam');
+      setEditCaste(profile.caste || profile.sect || 'Sunni');
+      setEditSubCaste(profile.sub_caste || '');
+
       setEditHeight(profile.height ? profile.height.toString() : '');
       setEditWeight(profile.weight ? profile.weight.toString() : '');
+      setEditSkinColor(profile.skin_color || '');
+      setEditBloodGroup(profile.blood_group || '');
+      setEditBodyType(profile.body_type || '');
+
+      setEditFamilyType(profile.family_type || '');
+      setEditFatherName(profile.father_name || '');
+      setEditMotherName(profile.mother_name || '');
+
+      setEditInterests(Array.isArray(profile.interests) ? profile.interests.join(', ') : (profile.interests || ''));
+      setEditPersonality(profile.personality || '');
+      setEditEatingHabit(profile.eating_habit || '');
+      setEditSmokingHabit(profile.smoking_habit || '');
+      setEditDrinkingHabit(profile.drinking_habit || '');
+
+      setEditPartnerReligion(Array.isArray(profile.partner_religion) ? profile.partner_religion.join(', ') : (profile.partner_religion || 'Islam'));
+      setEditPartnerCaste(Array.isArray(profile.partner_caste) ? profile.partner_caste.join(', ') : (profile.partner_caste || 'Sunni'));
+      setEditPartnerSubCaste(Array.isArray(profile.partner_sub_caste) ? profile.partner_sub_caste.join(', ') : (profile.partner_sub_caste || ''));
+      setEditPartnerAgeMin(profile.partner_age_min ? String(profile.partner_age_min) : '18');
+      setEditPartnerAgeMax(profile.partner_age_max ? String(profile.partner_age_max) : '40');
+      setEditPartnerExpectation(profile.partner_expectation || '');
+
+      // Load questionnaires map
+      const qAnswersMap: Record<string, string> = {};
+      if (profile.questionnaires && Array.isArray(profile.questionnaires)) {
+        profile.questionnaires.forEach((q: any) => {
+          if (q.question && q.answer) {
+            qAnswersMap[q.question] = q.answer;
+          }
+        });
+      }
+      setQuestionAnswers(qAnswersMap);
+
+      setActiveEditTab('basic');
       setEditModalVisible(true);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Could not retrieve profile information.');
@@ -244,20 +383,90 @@ export default function AccountScreen() {
 
     setIsSavingProfile(true);
     try {
+      const qList = Object.keys(questionAnswers).map((q) => ({
+        question: q,
+        answer: questionAnswers[q],
+      })).filter((item) => item.answer && item.answer.trim().length > 0);
+
+      const interestsArr = editInterests.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerReligionArr = editPartnerReligion.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerCasteArr = editPartnerCaste.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerSubCasteArr = editPartnerSubCaste.split(',').map((s) => s.trim()).filter(Boolean);
+
       const updatedData = {
         name: editName.trim(),
         age: ageNum,
-        present_location: editLocation.trim(),
-        profession: editProfession.trim(),
+        gender: editGender,
+        marital_status: editMaritalStatus,
+        profile_created_for: editProfileCreatedFor,
+        tagline: editTagline.trim(),
+        profile_description: editProfileDesc.trim(),
         about: editAbout.trim(),
+
+        marriage_goals: editMarriageGoals.trim(),
+        marriage_plan: editMarriagePlan.trim(),
+        voice_intro_url: editVoiceIntroUrl.trim(),
+        video_intro_url: editVideoIntroUrl.trim(),
+        future_children_plans: editFutureChildren.trim(),
+
+        primary_no: editPrimaryNo.trim(),
+        secondary_no: editSecondaryNo.trim(),
+        email: editEmail.trim(),
+        whatsapp_no: editWhatsappNo.trim(),
+        contact_person: editContactPerson.trim(),
+        full_address: editFullAddress.trim(),
+        preferred_contact_method: editPreferredContact,
+        best_time_to_call: editBestTimeToCall.trim(),
+
         education: editEducation.trim(),
+        university_or_college: editUniversity.trim(),
+        profession: editProfession.trim(),
+        job_title_or_role: editJobTitle.trim(),
+        company_name: editCompanyName.trim(),
+        job_experience: editJobExp.trim(),
         annual_income: editIncome ? parseFloat(editIncome) : null,
+
+        present_location: editLocation.trim(),
+        present_state: editPresentState.trim(),
+        present_country: editPresentCountry.trim(),
+        residential_location: editResLocation.trim(),
+        home_location: editHomeLocation.trim(),
+        grew_up_in: editGrewUpIn.trim(),
+        willing_to_relocate: editRelocate,
+
+        religion: editReligion,
+        sect: editCaste,
+        caste: editCaste,
+        sub_caste: editSubCaste.trim(),
+
         height: editHeight ? parseFloat(editHeight) : null,
         weight: editWeight ? parseFloat(editWeight) : null,
+        skin_color: editSkinColor.trim(),
+        blood_group: editBloodGroup.trim(),
+        body_type: editBodyType.trim(),
+
+        family_type: editFamilyType.trim(),
+        father_name: editFatherName.trim(),
+        mother_name: editMotherName.trim(),
+
+        interests: interestsArr,
+        personality: editPersonality.trim(),
+        eating_habit: editEatingHabit,
+        smoking_habit: editSmokingHabit,
+        drinking_habit: editDrinkingHabit,
+
+        partner_religion: partnerReligionArr,
+        partner_caste: partnerCasteArr,
+        partner_sub_caste: partnerSubCasteArr,
+        partner_age_min: parseInt(editPartnerAgeMin) || 18,
+        partner_age_max: parseInt(editPartnerAgeMax) || 70,
+        partner_expectation: editPartnerExpectation.trim(),
+
+        questionnaires: qList,
       };
 
       await api.updateMyProfile(updatedData);
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert('Success', 'Profile updated successfully across all categories!');
       setEditModalVisible(false);
       loadData(); // Refresh summary values
     } catch (error: any) {
@@ -989,134 +1198,694 @@ export default function AccountScreen() {
         </View>
       </Modal>
 
-      {/* Modal 5: Edit Profile */}
+      {/* Modal 5: Edit Profile (Multi-Category Categorized Form) */}
       <Modal visible={editModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.bottomSheet}>
+          <View style={[styles.bottomSheet, { height: '88%' }]}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Edit Profile Details</Text>
+              <Text style={styles.sheetTitle}>Edit Profile (All Categories)</Text>
               <TouchableOpacity onPress={() => setEditModalVisible(false)} disabled={isSavingProfile}>
                 <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
 
+            {/* Category Navigation Bar */}
+            <View style={{ height: 44, marginBottom: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, alignItems: 'center' }}>
+                {[
+                  { id: 'basic', label: '1. Basic & Tagline' },
+                  { id: 'marriage', label: '2. Marriage & Intros' },
+                  { id: 'contact', label: '3. Contact Details' },
+                  { id: 'education', label: '4. Edu & Profession' },
+                  { id: 'location', label: '5. Location & Origin' },
+                  { id: 'questionnaire', label: '6. Questionnaire' },
+                  { id: 'religious', label: '7. Socio-Religious' },
+                  { id: 'physical', label: '8. Physical & Appearance' },
+                  { id: 'family', label: '9. Family & Living' },
+                  { id: 'lifestyle', label: '10. Lifestyle & Habits' },
+                  { id: 'partner', label: '11. Partner Prefs' },
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      backgroundColor: activeEditTab === tab.id ? Colors.light.primary : '#f3f4f6',
+                      marginRight: 6,
+                    }}
+                    onPress={() => setActiveEditTab(tab.id as any)}
+                  >
+                    <Text style={{ fontSize: 11, color: activeEditTab === tab.id ? '#fff' : Colors.light.text, fontWeight: activeEditTab === tab.id ? 'bold' : '500' }}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>FULL NAME</Text>
-              <TextInput
-                style={styles.paymentInput}
-                value={editName}
-                onChangeText={setEditName}
-                placeholder="Ahmed Khan"
-                placeholderTextColor={Colors.light.textSecondary}
-                editable={!isSavingProfile}
-              />
-
-              <Text style={styles.inputLabel}>AGE</Text>
-              <TextInput
-                style={styles.paymentInput}
-                value={editAge}
-                onChangeText={setEditAge}
-                placeholder="28"
-                placeholderTextColor={Colors.light.textSecondary}
-                keyboardType="numeric"
-                maxLength={3}
-                editable={!isSavingProfile}
-              />
-
-              <Text style={styles.inputLabel}>PRESENT LOCATION (CITY/DISTRICT)</Text>
-              <TextInput
-                style={styles.paymentInput}
-                value={editLocation}
-                onChangeText={setEditLocation}
-                placeholder="Mumbai"
-                placeholderTextColor={Colors.light.textSecondary}
-                editable={!isSavingProfile}
-              />
-
-              <Text style={styles.inputLabel}>PROFESSION</Text>
-              <TextInput
-                style={styles.paymentInput}
-                value={editProfession}
-                onChangeText={setEditProfession}
-                placeholder="Software Engineer"
-                placeholderTextColor={Colors.light.textSecondary}
-                editable={!isSavingProfile}
-              />
-
-              <Text style={styles.inputLabel}>EDUCATION</Text>
-              <TextInput
-                style={styles.paymentInput}
-                value={editEducation}
-                onChangeText={setEditEducation}
-                placeholder="B.Tech Computer Science"
-                placeholderTextColor={Colors.light.textSecondary}
-                editable={!isSavingProfile}
-              />
-
-              <Text style={styles.inputLabel}>ANNUAL INCOME (INR)</Text>
-              <TextInput
-                style={styles.paymentInput}
-                value={editIncome}
-                onChangeText={setEditIncome}
-                placeholder="1200000"
-                placeholderTextColor={Colors.light.textSecondary}
-                keyboardType="numeric"
-                editable={!isSavingProfile}
-              />
-
-              <View style={styles.rowInputs}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.inputLabel}>HEIGHT (CM)</Text>
+              {/* TAB 1: BASIC & TAGLINE */}
+              {activeEditTab === 'basic' && (
+                <View>
+                  <Text style={styles.faqHeader}>TAGLINE & ABOUT ME</Text>
+                  <Text style={styles.inputLabel}>PROFILE TAGLINE</Text>
                   <TextInput
                     style={styles.paymentInput}
-                    value={editHeight}
-                    onChangeText={setEditHeight}
-                    placeholder="178"
+                    value={editTagline}
+                    onChangeText={setEditTagline}
+                    placeholder="e.g. Seeking a pious, family-oriented life partner"
                     placeholderTextColor={Colors.light.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={3}
-                    editable={!isSavingProfile}
                   />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>WEIGHT (KG)</Text>
+
+                  <Text style={styles.inputLabel}>SHORT PROFILE DESCRIPTION</Text>
                   <TextInput
                     style={styles.paymentInput}
-                    value={editWeight}
-                    onChangeText={setEditWeight}
-                    placeholder="74"
+                    value={editProfileDesc}
+                    onChangeText={setEditProfileDesc}
+                    placeholder="Brief intro for search card"
                     placeholderTextColor={Colors.light.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={3}
-                    editable={!isSavingProfile}
+                  />
+
+                  <Text style={styles.inputLabel}>ABOUT ME (DETAILED)</Text>
+                  <TextInput
+                    style={[styles.paymentInput, { height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
+                    value={editAbout}
+                    onChangeText={setEditAbout}
+                    placeholder="Tell potential matches about your values, goals, lifestyle..."
+                    placeholderTextColor={Colors.light.textSecondary}
+                    multiline
+                  />
+
+                  <Text style={[styles.faqHeader, { marginTop: 16 }]}>BASIC DETAILS</Text>
+                  <Text style={styles.inputLabel}>FULL NAME</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Ahmed Khan"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <View style={styles.rowInputs}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.inputLabel}>AGE</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={editAge}
+                        onChangeText={setEditAge}
+                        keyboardType="numeric"
+                        maxLength={3}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>GENDER</Text>
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+                        {['Male', 'Female'].map((g) => (
+                          <TouchableOpacity
+                            key={g}
+                            style={{ flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: editGender === g ? Colors.light.primary : '#f3f4f6', alignItems: 'center' }}
+                            onPress={() => setEditGender(g)}
+                          >
+                            <Text style={{ color: editGender === g ? '#fff' : Colors.light.text, fontSize: 12, fontWeight: 'bold' }}>{g}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  <Text style={styles.inputLabel}>MARITAL STATUS</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {['Never Married', 'Divorced', 'Widowed', 'Awaiting Divorce'].map((ms) => (
+                      <TouchableOpacity
+                        key={ms}
+                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: editMaritalStatus === ms ? Colors.light.secondaryContainer : '#f3f4f6' }}
+                        onPress={() => setEditMaritalStatus(ms)}
+                      >
+                        <Text style={{ color: editMaritalStatus === ms ? Colors.light.onSecondaryContainer : Colors.light.text, fontSize: 12, fontWeight: 'bold' }}>{ms}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.inputLabel}>PROFILE CREATED FOR</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editProfileCreatedFor}
+                    onChangeText={setEditProfileCreatedFor}
+                    placeholder="Self, Son, Daughter, Brother, Sister, Friend"
+                    placeholderTextColor={Colors.light.textSecondary}
                   />
                 </View>
-              </View>
+              )}
 
-              <Text style={styles.inputLabel}>ABOUT ME</Text>
-              <TextInput
-                style={[styles.paymentInput, { height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
-                value={editAbout}
-                onChangeText={setEditAbout}
-                placeholder="Tell potential matches about yourself, hobbies, values, etc..."
-                placeholderTextColor={Colors.light.textSecondary}
-                multiline
-                numberOfLines={3}
-                editable={!isSavingProfile}
-              />
+              {/* TAB 2: MARRIAGE GOALS & INTROS */}
+              {activeEditTab === 'marriage' && (
+                <View>
+                  <Text style={styles.faqHeader}>MARRIAGE GOALS & INTROS</Text>
+                  <Text style={styles.inputLabel}>MARRIAGE GOALS & VISION</Text>
+                  <TextInput
+                    style={[styles.paymentInput, { height: 70, textAlignVertical: 'top', paddingTop: 8 }]}
+                    value={editMarriageGoals}
+                    onChangeText={setEditMarriageGoals}
+                    placeholder="What are your goals and expectations for marriage?"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    multiline
+                  />
+
+                  <Text style={styles.inputLabel}>MARRIAGE TIMELINE & PLAN</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editMarriagePlan}
+                    onChangeText={setEditMarriagePlan}
+                    placeholder="e.g. Planning to marry within 6-12 months"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>FUTURE CHILDREN PLANS</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editFutureChildren}
+                    onChangeText={setEditFutureChildren}
+                    placeholder="e.g. Want children, Open to discuss"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>VOICE INTRO AUDIO URL</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editVoiceIntroUrl}
+                    onChangeText={setEditVoiceIntroUrl}
+                    placeholder="https://example.com/voice-intro.mp3"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>VIDEO INTRO URL</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editVideoIntroUrl}
+                    onChangeText={setEditVideoIntroUrl}
+                    placeholder="https://example.com/video-intro.mp4"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              )}
+
+              {/* TAB 3: CONTACT DETAILS */}
+              {activeEditTab === 'contact' && (
+                <View>
+                  <Text style={styles.faqHeader}>CONTACT DETAILS</Text>
+                  <Text style={styles.inputLabel}>PRIMARY CONTACT NUMBER</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPrimaryNo}
+                    onChangeText={setEditPrimaryNo}
+                    placeholder="+91 9876543210"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="phone-pad"
+                  />
+
+                  <Text style={styles.inputLabel}>SECONDARY / GUARDIAN NUMBER</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editSecondaryNo}
+                    onChangeText={setEditSecondaryNo}
+                    placeholder="+91 9123456789"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="phone-pad"
+                  />
+
+                  <Text style={styles.inputLabel}>WHATSAPP NUMBER</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editWhatsappNo}
+                    onChangeText={setEditWhatsappNo}
+                    placeholder="+91 9876543210"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="phone-pad"
+                  />
+
+                  <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editEmail}
+                    onChangeText={setEditEmail}
+                    placeholder="user@example.com"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="email-address"
+                  />
+
+                  <Text style={styles.inputLabel}>CONTACT PERSON (e.g. Father, Self)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editContactPerson}
+                    onChangeText={setEditContactPerson}
+                    placeholder="Father - Abdul Khan"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PREFERRED CONTACT METHOD</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPreferredContact}
+                    onChangeText={setEditPreferredContact}
+                    placeholder="Phone Call, WhatsApp, Email"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>BEST TIME TO CALL</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editBestTimeToCall}
+                    onChangeText={setEditBestTimeToCall}
+                    placeholder="Evening 6 PM - 9 PM"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>FULL RESIDENTIAL ADDRESS</Text>
+                  <TextInput
+                    style={[styles.paymentInput, { height: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                    value={editFullAddress}
+                    onChangeText={setEditFullAddress}
+                    placeholder="House No, Street, Landmark, District, Pincode"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    multiline
+                  />
+                </View>
+              )}
+
+              {/* TAB 4: EDUCATION & PROFESSION */}
+              {activeEditTab === 'education' && (
+                <View>
+                  <Text style={styles.faqHeader}>EDUCATION & PROFESSION</Text>
+                  <Text style={styles.inputLabel}>HIGHEST EDUCATION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editEducation}
+                    onChangeText={setEditEducation}
+                    placeholder="B.Tech Computer Science / Master of Science"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>UNIVERSITY / COLLEGE NAME</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editUniversity}
+                    onChangeText={setEditUniversity}
+                    placeholder="University of Mumbai / IIT Bombay"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PROFESSION / FIELD</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editProfession}
+                    onChangeText={setEditProfession}
+                    placeholder="Software Engineer / Doctor / Business"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>JOB TITLE OR ROLE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editJobTitle}
+                    onChangeText={setEditJobTitle}
+                    placeholder="Senior Developer / Consultant"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>COMPANY / EMPLOYER NAME</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editCompanyName}
+                    onChangeText={setEditCompanyName}
+                    placeholder="Tech Corp Pvt Ltd"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>JOB EXPERIENCE (YEARS)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editJobExp}
+                    onChangeText={setEditJobExp}
+                    placeholder="5 Years"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>ANNUAL INCOME (INR)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editIncome}
+                    onChangeText={setEditIncome}
+                    placeholder="1200000"
+                    placeholderTextColor={Colors.light.textSecondary}
+                    keyboardType="numeric"
+                  />
+                </View>
+              )}
+
+              {/* TAB 5: LOCATION & ORIGIN */}
+              {activeEditTab === 'location' && (
+                <View>
+                  <Text style={styles.faqHeader}>LOCATION & ORIGIN</Text>
+                  <Text style={styles.inputLabel}>PRESENT LOCATION (CITY / DISTRICT)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editLocation}
+                    onChangeText={setEditLocation}
+                    placeholder="Mumbai / Kochi / Dubai"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PRESENT STATE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPresentState}
+                    onChangeText={setEditPresentState}
+                    placeholder="Maharashtra / Kerala"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PRESENT COUNTRY</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPresentCountry}
+                    onChangeText={setEditPresentCountry}
+                    placeholder="India / UAE"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>NATIVE HOME LOCATION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editHomeLocation}
+                    onChangeText={setEditHomeLocation}
+                    placeholder="Kozhikode, Kerala"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>GREW UP IN</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editGrewUpIn}
+                    onChangeText={setEditGrewUpIn}
+                    placeholder="Mumbai, Maharashtra"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>WILLING TO RELOCATE AFTER MARRIAGE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editRelocate}
+                    onChangeText={setEditRelocate}
+                    placeholder="Yes / No / Open to Discuss"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              )}
+
+              {/* TAB 6: QUESTIONNAIRE */}
+              {activeEditTab === 'questionnaire' && (
+                <View>
+                  <Text style={styles.faqHeader}>MATRIMONIAL QUESTIONNAIRE</Text>
+                  <Text style={styles.alertText}>Answer key predefined matrimonial questions to give matches insight into your mindset.</Text>
+
+                  {PREDEFINED_QUESTIONS.map((q, idx) => (
+                    <View key={idx} style={{ marginBottom: 16 }}>
+                      <Text style={[styles.inputLabel, { color: Colors.light.primary }]}>{idx + 1}. {q}</Text>
+                      <TextInput
+                        style={[styles.paymentInput, { height: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                        value={questionAnswers[q] || ''}
+                        onChangeText={(ans) => setQuestionAnswers((prev) => ({ ...prev, [q]: ans }))}
+                        placeholder="Your thoughts/answer..."
+                        placeholderTextColor={Colors.light.textSecondary}
+                        multiline
+                      />
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* TAB 7: SOCIO-RELIGIOUS */}
+              {activeEditTab === 'religious' && (
+                <View>
+                  <Text style={styles.faqHeader}>SOCIO-RELIGIOUS DETAILS</Text>
+                  <Text style={styles.inputLabel}>RELIGION</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {Object.keys(RELIGION_CASTE_MAP).map((rel) => (
+                      <TouchableOpacity
+                        key={rel}
+                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: editReligion === rel ? Colors.light.primary : '#f3f4f6' }}
+                        onPress={() => {
+                          setEditReligion(rel);
+                          const defaultCastes = RELIGION_CASTE_MAP[rel] || ['Other'];
+                          setEditCaste(defaultCastes[0]);
+                        }}
+                      >
+                        <Text style={{ color: editReligion === rel ? '#fff' : Colors.light.text, fontSize: 12, fontWeight: 'bold' }}>{rel}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.inputLabel}>CASTE / SECT (FOR {editReligion.toUpperCase()})</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {(RELIGION_CASTE_MAP[editReligion] || ['Other']).map((casteOpt) => (
+                      <TouchableOpacity
+                        key={casteOpt}
+                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: editCaste === casteOpt ? Colors.light.secondaryContainer : '#f3f4f6' }}
+                        onPress={() => setEditCaste(casteOpt)}
+                      >
+                        <Text style={{ color: editCaste === casteOpt ? Colors.light.onSecondaryContainer : Colors.light.text, fontSize: 12, fontWeight: 'bold' }}>{casteOpt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.inputLabel}>SUB-CASTE / DENOMINATION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editSubCaste}
+                    onChangeText={setEditSubCaste}
+                    placeholder="e.g. Mudaliar, Pillai, Iyer, Shafi'i, Kanthapuram"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              )}
+
+              {/* TAB 8: PHYSICAL & APPEARANCE */}
+              {activeEditTab === 'physical' && (
+                <View>
+                  <Text style={styles.faqHeader}>PHYSICAL & APPEARANCE</Text>
+                  <View style={styles.rowInputs}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.inputLabel}>HEIGHT (CM)</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={editHeight}
+                        onChangeText={setEditHeight}
+                        placeholder="178"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>WEIGHT (KG)</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={editWeight}
+                        onChangeText={setEditWeight}
+                        placeholder="74"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.inputLabel}>SKIN COLOR / COMPLEXION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editSkinColor}
+                    onChangeText={setEditSkinColor}
+                    placeholder="Fair / Wheatish / Dark"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>BLOOD GROUP</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editBloodGroup}
+                    onChangeText={setEditBloodGroup}
+                    placeholder="O+ / A+ / B+"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>BODY TYPE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editBodyType}
+                    onChangeText={setEditBodyType}
+                    placeholder="Athletic / Average / Slim"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              )}
+
+              {/* TAB 9: FAMILY & LIVING */}
+              {activeEditTab === 'family' && (
+                <View>
+                  <Text style={styles.faqHeader}>FAMILY & LIVING DETAILS</Text>
+                  <Text style={styles.inputLabel}>FAMILY TYPE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editFamilyType}
+                    onChangeText={setEditFamilyType}
+                    placeholder="Nuclear / Joint Family"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>FATHER'S NAME & OCCUPATION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editFatherName}
+                    onChangeText={setEditFatherName}
+                    placeholder="Abdul Khan - Businessman"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>MOTHER'S NAME & OCCUPATION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editMotherName}
+                    onChangeText={setEditMotherName}
+                    placeholder="Fatima Khan - Homemaker"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              )}
+
+              {/* TAB 10: LIFESTYLE & HOBBIES */}
+              {activeEditTab === 'lifestyle' && (
+                <View>
+                  <Text style={styles.faqHeader}>LIFESTYLE & HOBBIES</Text>
+                  <Text style={styles.inputLabel}>INTERESTS & HOBBIES (COMMA SEPARATED)</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editInterests}
+                    onChangeText={setEditInterests}
+                    placeholder="Reading, Travelling, Football, Cooking"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PERSONALITY TYPE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPersonality}
+                    onChangeText={setEditPersonality}
+                    placeholder="Ambivert / Introvert / Extrovert"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>EATING HABIT</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editEatingHabit}
+                    onChangeText={setEditEatingHabit}
+                    placeholder="Halal / Non-Veg / Vegetarian"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>SMOKING HABIT</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editSmokingHabit}
+                    onChangeText={setEditSmokingHabit}
+                    placeholder="Non-Smoker / Occasionally"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>DRINKING HABIT</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editDrinkingHabit}
+                    onChangeText={setEditDrinkingHabit}
+                    placeholder="Never / Teetotaler"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+                </View>
+              )}
+
+              {/* TAB 11: PARTNER PREFERENCES */}
+              {activeEditTab === 'partner' && (
+                <View>
+                  <Text style={styles.faqHeader}>PARTNER PREFERENCES & EXPECTATIONS</Text>
+                  <Text style={styles.inputLabel}>PREFERRED PARTNER RELIGION</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPartnerReligion}
+                    onChangeText={setEditPartnerReligion}
+                    placeholder="e.g. Islam, Hinduism, Any"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PREFERRED PARTNER CASTE / SECT</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPartnerCaste}
+                    onChangeText={setEditPartnerCaste}
+                    placeholder="e.g. Sunni, Brahmin, Open to All"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <Text style={styles.inputLabel}>PREFERRED PARTNER SUB-CASTE</Text>
+                  <TextInput
+                    style={styles.paymentInput}
+                    value={editPartnerSubCaste}
+                    onChangeText={setEditPartnerSubCaste}
+                    placeholder="e.g. Any"
+                    placeholderTextColor={Colors.light.textSecondary}
+                  />
+
+                  <View style={styles.rowInputs}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.inputLabel}>MIN AGE</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={editPartnerAgeMin}
+                        onChangeText={setEditPartnerAgeMin}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>MAX AGE</Text>
+                      <TextInput
+                        style={styles.paymentInput}
+                        value={editPartnerAgeMax}
+                        onChangeText={setEditPartnerAgeMax}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.inputLabel}>PARTNER EXPECTATIONS (NOTE)</Text>
+                  <TextInput
+                    style={[styles.paymentInput, { height: 80, textAlignVertical: 'top', paddingTop: 8 }]}
+                    value={editPartnerExpectation}
+                    onChangeText={setEditPartnerExpectation}
+                    placeholder="Write a note about what you are looking for in your ideal spouse..."
+                    placeholderTextColor={Colors.light.textSecondary}
+                    multiline
+                  />
+                </View>
+              )}
 
               <TouchableOpacity
-                style={[styles.payNowBtn, { backgroundColor: isSavingProfile ? '#9ca3af' : Colors.light.primary, marginBottom: 40 }]}
+                style={[styles.payNowBtn, { backgroundColor: isSavingProfile ? '#9ca3af' : Colors.light.primary, marginVertical: 30 }]}
                 onPress={handleSaveProfile}
                 disabled={isSavingProfile}
               >
                 {isSavingProfile ? (
                   <View style={styles.payBtnLoadingRow}>
                     <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.payNowBtnText}>Saving Profile Changes...</Text>
+                    <Text style={styles.payNowBtnText}>Saving All Profile Categories...</Text>
                   </View>
                 ) : (
-                  <Text style={styles.payNowBtnText}>Save Profile Details</Text>
+                  <Text style={styles.payNowBtnText}>Save Profile Updates</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
