@@ -38,6 +38,7 @@ interface MenuSummary {
   remaining_contact_views: number;
   remaining_messages: number;
   remaining_call_time: number;
+  credits: number;
   plan_validity: string | null;
   is_expired: boolean;
 }
@@ -768,9 +769,9 @@ export default function AccountScreen() {
 
           <View style={styles.quotaGrid}>
             <View style={styles.quotaBox}>
-              <Text style={styles.quotaLabel}>CONTACTS</Text>
+              <Text style={styles.quotaLabel}>CREDITS</Text>
               <Text style={styles.quotaValue}>
-                {summary.remaining_contact_views === 9999 ? '∞' : summary.remaining_contact_views}
+                {summary.credits === 9999 ? '∞' : (summary.credits ?? 0)}
               </Text>
             </View>
             <View style={styles.quotaBox}>
@@ -907,25 +908,25 @@ export default function AccountScreen() {
                   <Text style={styles.planTitle}>Silver Plan</Text>
                   <Text style={styles.planPrice}>₹1,499 / mo</Text>
                 </View>
-                <Text style={styles.planDesc}>• 20 Contact Views • 200 Messages • 60 Mins Calls • Validity: 30 days</Text>
+                 <Text style={styles.planDesc}>• 100 Contact Credits • 200 Messages • 60 Mins Calls • Validity: 30 days</Text>
               </TouchableOpacity>
-
+ 
               {/* Plan 2: Gold */}
               <TouchableOpacity style={[styles.planCard, styles.goldPlanCard]} onPress={() => handleSelectPlan('Gold')}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: '#735c00' }]}>Gold Plan</Text>
                   <Text style={[styles.planPrice, { color: '#735c00' }]}>₹2,999 / 3 mos</Text>
                 </View>
-                <Text style={styles.planDesc}>• 100 Contact Views • 1000 Messages • 300 Mins Calls • Validity: 90 days</Text>
+                <Text style={styles.planDesc}>• 500 Contact Credits • 1000 Messages • 300 Mins Calls • Validity: 90 days</Text>
               </TouchableOpacity>
-
+ 
               {/* Plan 3: Platinum */}
               <TouchableOpacity style={[styles.planCard, styles.platPlanCard]} onPress={() => handleSelectPlan('Platinum')}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: '#fff' }]}>Platinum Plan</Text>
                   <Text style={[styles.planPrice, { color: '#fff' }]}>₹5,499 / 6 mos</Text>
                 </View>
-                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Contacts • Unlimited Messages • 1000 Mins Calls • Validity: 180 days</Text>
+                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Credits • Unlimited Messages • 1000 Mins Calls • Validity: 180 days</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

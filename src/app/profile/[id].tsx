@@ -74,11 +74,14 @@ export default function ProfileDetailsScreen() {
   const [isCreditModalVisible, setIsCreditModalVisible] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const noteTimeoutRef = useRef<any>(null);
 
   const loadProfileDetails = async () => {
     setIsLoading(true);
+    setIsContactUnlocked(false);
+    setCurrentImageIndex(0);
     try {
       // 1. Fetch main profile
       const data = await api.getProfileById(profileId);
@@ -101,7 +104,7 @@ export default function ProfileDetailsScreen() {
 
       // 4. Fetch menu summary to see credit balance
       const menu = await api.getMenuSummary();
-      setCreditsRemaining(50 - menu.remaining_contact_views); // calculated offset or display standard credits
+      setCreditsRemaining(menu.credits ?? 0);
       setCurrentUserId(menu.user_id);
 
       // 5. Handle self-preview or already unlocked checks
@@ -110,7 +113,13 @@ export default function ProfileDetailsScreen() {
       } else {
         try {
           const viewed = await api.getViewedContacts();
-          const alreadyViewed = viewed.some((cv: any) => cv.receiver_id === data.user_id);
+          console.log('[Unlock Check] Viewed list:', viewed.map((v: any) => ({ viewed_id: v.viewed_id, profile_id: v.viewed_profile?.id })));
+          console.log('[Unlock Check] Current Profile user_id:', data.user_id, 'profile_id:', data.id);
+          const alreadyViewed = viewed.some((cv: any) => 
+            (cv.viewed_id !== undefined && Number(cv.viewed_id) === Number(data.user_id)) ||
+            (cv.viewed_profile?.id !== undefined && Number(cv.viewed_profile.id) === Number(data.id))
+          );
+          console.log('[Unlock Check] Already viewed match status:', alreadyViewed);
           if (alreadyViewed) {
             setIsContactUnlocked(true);
           }
@@ -183,6 +192,7 @@ export default function ProfileDetailsScreen() {
       await api.viewContact(profile.user_id);
       setIsContactUnlocked(true);
       setIsCreditModalVisible(false);
+      await loadProfileDetails();
       Alert.alert('Success', 'Contact details unlocked successfully!');
     } catch (error: any) {
       Alert.alert('Unlock Failed', error.message || 'Insufficient credits or request failed.');
@@ -218,9 +228,48 @@ export default function ProfileDetailsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Main Hero Image */}
+        {/* Main Hero Image Carousel */}
         <View style={styles.heroSection}>
-          <Image source={{ uri: primaryPhoto }} style={styles.heroImage} />
+          {profile.photos && profile.photos.length > 0 ? (
+            <ScrollView 
+              horizontal 
+              pagingEnabled 
+              showsHorizontalScrollIndicator={false}
+              style={{ width: '100%', height: '100%' }}
+              onScroll={(e) => {
+                const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+                setCurrentImageIndex(newIndex);
+              }}
+              scrollEventThrottle={16}
+            >
+              {profile.photos.map((photo) => (
+                <Image 
+                  key={photo.id} 
+                  source={{ uri: photo.url }} 
+                  style={{ width: width, height: '100%' }} 
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <Image source={{ uri: primaryPhoto }} style={styles.heroImage} />
+          )}
+
+          {/* Indicator dots for multiple photos */}
+          {profile.photos && profile.photos.length > 1 && (
+            <View style={styles.paginationIndicatorContainer}>
+              {profile.photos.map((_, index) => (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.paginationDot, 
+                    currentImageIndex === index && styles.paginationDotActive
+                  ]} 
+                />
+              ))}
+            </View>
+          )}
+
           <View style={styles.gradientOverlay} />
           
           <View style={styles.heroTextContainer}>
@@ -236,15 +285,6 @@ export default function ProfileDetailsScreen() {
             <Text style={styles.heroSub}>{profile.profession} • {profile.present_location}, {profile.present_state}</Text>
           </View>
         </View>
-
-        {/* Photo Gallery Scroll */}
-        {profile.photos && profile.photos.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryContainer}>
-            {profile.photos.map((photo) => (
-              <Image key={photo.id} source={{ uri: photo.url }} style={styles.galleryImage} />
-            ))}
-          </ScrollView>
-        )}
 
         {/* Tagline */}
         <View style={styles.taglineSection}>
@@ -448,6 +488,10 @@ export default function ProfileDetailsScreen() {
                 Unlocking contact details requires <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>5 Credits</Text>. You will be charged directly from your subscription balance.
               </Text>
 
+              <Text style={{ textAlign: 'center', fontSize: 13, color: Colors.light.textSecondary, marginBottom: 4 }}>
+                Current Balance: <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>{creditsRemaining === 9999 ? 'Unlimited' : `${creditsRemaining} Credits`}</Text>
+              </Text>
+
               <TouchableOpacity 
                 style={styles.unlockSubmitBtn}
                 onPress={handleUnlockContact}
@@ -515,6 +559,25 @@ const styles = StyleSheet.create({
     top: '50%',
     bottom: 0,
     backgroundColor: 'rgba(87, 0, 19, 0.3)',
+  },
+  paginationIndicatorContainer: {
+    position: 'absolute',
+    top: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    zIndex: 10,
+  },
+  paginationDot: {
+    width: 24,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  paginationDotActive: {
+    backgroundColor: '#fff',
   },
   heroTextContainer: {
     position: 'absolute',
