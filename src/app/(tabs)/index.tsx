@@ -11,12 +11,24 @@ import {
   Dimensions,
   Platform,
   Modal,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { Alert } from '../../utils/alert';
+
+const RELIGION_CASTE_MAP: Record<string, string[]> = {
+  Islam: ['Sunni', 'Shia', 'Deobandi', 'Barelvi', 'Ahmadiyya', 'Other'],
+  Hinduism: ['Brahmin', 'Kshatriya', 'Vaishya', 'Shudra', 'Maratha', 'Rajput', 'Kayastha', 'Nair', 'Ezhava', 'Yadav', 'Other'],
+  Christianity: ['Catholic', 'Protestant', 'Orthodox', 'Pentecostal', 'Syrian Christian', 'Other'],
+  Sikhism: ['Jat Sikh', 'Ramgarhia', 'Khatri', 'Arora', 'Ahluwalia', 'Other'],
+  Buddhism: ['Theravada', 'Mahayana', 'Vajrayana', 'Other'],
+  Jainism: ['Digambara', 'Shvetambara', 'Other'],
+  Other: ['General', 'Other'],
+};
 
 const { width } = Dimensions.get('window');
 
@@ -53,7 +65,69 @@ export default function DiscoverScreen() {
   const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Preference Setup Modal States
+  const [prefModalVisible, setPrefModalVisible] = useState(false);
+  const [editReligion, setEditReligion] = useState('Islam');
+  const [editCaste, setEditCaste] = useState('Sunni');
+  const [editSubCaste, setEditSubCaste] = useState('');
+  const [editPartnerReligion, setEditPartnerReligion] = useState('Islam');
+  const [editPartnerCaste, setEditPartnerCaste] = useState('Sunni');
+  const [editPartnerSubCaste, setEditPartnerSubCaste] = useState('');
+  const [editPartnerAgeMin, setEditPartnerAgeMin] = useState('18');
+  const [editPartnerAgeMax, setEditPartnerAgeMax] = useState('40');
+  const [isSavingPref, setIsSavingPref] = useState(false);
+
   const router = useRouter();
+
+  const openPreferencesModal = async () => {
+    try {
+      const profile = await api.getMyProfile();
+      setEditReligion(profile.religion || 'Islam');
+      setEditCaste(profile.caste || profile.sect || 'Sunni');
+      setEditSubCaste(profile.sub_caste || '');
+
+      setEditPartnerReligion(Array.isArray(profile.partner_religion) ? profile.partner_religion.join(', ') : (profile.partner_religion || 'Islam'));
+      setEditPartnerCaste(Array.isArray(profile.partner_caste) ? profile.partner_caste.join(', ') : (profile.partner_caste || 'Sunni'));
+      setEditPartnerSubCaste(Array.isArray(profile.partner_sub_caste) ? profile.partner_sub_caste.join(', ') : (profile.partner_sub_caste || ''));
+
+      setEditPartnerAgeMin(profile.partner_age_min ? String(profile.partner_age_min) : '18');
+      setEditPartnerAgeMax(profile.partner_age_max ? String(profile.partner_age_max) : '40');
+
+      setPrefModalVisible(true);
+    } catch (e: any) {
+      Alert.alert('Preferences', 'Please log in to set partner preferences.');
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    setIsSavingPref(true);
+    try {
+      const partnerReligionArr = editPartnerReligion.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerCasteArr = editPartnerCaste.split(',').map((s) => s.trim()).filter(Boolean);
+      const partnerSubCasteArr = editPartnerSubCaste.split(',').map((s) => s.trim()).filter(Boolean);
+
+      await api.updateMyProfile({
+        religion: editReligion,
+        sect: editCaste,
+        caste: editCaste,
+        sub_caste: editSubCaste.trim(),
+        partner_religion: partnerReligionArr,
+        partner_caste: partnerCasteArr,
+        partner_sub_caste: partnerSubCasteArr,
+        partner_age_min: parseInt(editPartnerAgeMin) || 18,
+        partner_age_max: parseInt(editPartnerAgeMax) || 70,
+      });
+
+      Alert.alert('Preferences Saved', 'Match recommendations updated based on your preferences!');
+      setPrefModalVisible(false);
+      loadProfiles(selectedCategory);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not save partner preferences.');
+    } finally {
+      setIsSavingPref(false);
+    }
+  };
 
   const loadProfiles = async (category: string) => {
     setIsLoading(true);
@@ -194,6 +268,21 @@ export default function DiscoverScreen() {
         />
       </View>
 
+      {selectedCategory === 'my_matches' && (
+        <View style={styles.prefBanner}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={styles.prefBannerTitle}>🎯 Recommended For You</Text>
+            <Text style={styles.prefBannerSub}>
+              Filtered based on your Religion, Caste & Partner Preferences
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.prefBannerBtn} onPress={openPreferencesModal}>
+            <Ionicons name="options-outline" size={14} color="#fff" style={{ marginRight: 4 }} />
+            <Text style={styles.prefBannerBtnText}>Preferences</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.primary} />
@@ -310,6 +399,136 @@ export default function DiscoverScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Quick Set Preferences Modal */}
+      <Modal visible={prefModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.previewContainer}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewTitle}>Customize Match Preferences</Text>
+              <TouchableOpacity onPress={() => setPrefModalVisible(false)} disabled={isSavingPref}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ paddingTop: 16 }} showsVerticalScrollIndicator={false}>
+              <Text style={styles.aboutTitle}>MY RELIGION & CASTE DETAILS</Text>
+
+              {/* Religion Selector */}
+              <Text style={styles.specLabel}>RELIGION</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 10 }}>
+                {Object.keys(RELIGION_CASTE_MAP).map((rel) => (
+                  <TouchableOpacity
+                    key={rel}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      backgroundColor: editReligion === rel ? Colors.light.primary : '#f3f4f6',
+                    }}
+                    onPress={() => {
+                      setEditReligion(rel);
+                      const defaultCastes = RELIGION_CASTE_MAP[rel] || ['Other'];
+                      setEditCaste(defaultCastes[0]);
+                    }}
+                  >
+                    <Text style={{ color: editReligion === rel ? '#fff' : Colors.light.text, fontSize: 12, fontWeight: editReligion === rel ? 'bold' : 'normal' }}>
+                      {rel}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Caste Selector */}
+              <Text style={styles.specLabel}>CASTE / SECT (FOR {editReligion.toUpperCase()})</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 10 }}>
+                {(RELIGION_CASTE_MAP[editReligion] || ['Other']).map((casteOpt) => (
+                  <TouchableOpacity
+                    key={casteOpt}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      backgroundColor: editCaste === casteOpt ? Colors.light.secondaryContainer : '#f3f4f6',
+                    }}
+                    onPress={() => setEditCaste(casteOpt)}
+                  >
+                    <Text style={{ color: editCaste === casteOpt ? Colors.light.onSecondaryContainer : Colors.light.text, fontSize: 12, fontWeight: editCaste === casteOpt ? 'bold' : 'normal' }}>
+                      {casteOpt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Sub-Caste Input */}
+              <Text style={styles.specLabel}>SUB-CASTE / DENOMINATION</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 10, fontSize: 14, marginVertical: 8 }}
+                value={editSubCaste}
+                onChangeText={setEditSubCaste}
+                placeholder="e.g. Mudaliar, Pillai, Iyer, Shafi'i, Kanthapuram"
+                placeholderTextColor="#9ca3af"
+              />
+
+              <Text style={[styles.aboutTitle, { marginTop: 16 }]}>PARTNER PREFERENCES</Text>
+
+              {/* Partner Religion */}
+              <Text style={styles.specLabel}>PREFERRED PARTNER RELIGION</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 10, fontSize: 14, marginVertical: 8 }}
+                value={editPartnerReligion}
+                onChangeText={setEditPartnerReligion}
+                placeholder="e.g. Islam, Hinduism, Any"
+                placeholderTextColor="#9ca3af"
+              />
+
+              {/* Partner Caste */}
+              <Text style={styles.specLabel}>PREFERRED PARTNER CASTE / SECT</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 10, fontSize: 14, marginVertical: 8 }}
+                value={editPartnerCaste}
+                onChangeText={setEditPartnerCaste}
+                placeholder="e.g. Sunni, Brahmin, Open to All"
+                placeholderTextColor="#9ca3af"
+              />
+
+              {/* Age Range */}
+              <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.specLabel}>MIN AGE</Text>
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 10, fontSize: 14, marginTop: 4 }}
+                    value={editPartnerAgeMin}
+                    onChangeText={setEditPartnerAgeMin}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.specLabel}>MAX AGE</Text>
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 10, fontSize: 14, marginTop: 4 }}
+                    value={editPartnerAgeMax}
+                    onChangeText={setEditPartnerAgeMax}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.fullProfileBtn, { height: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 8, marginVertical: 20 }]}
+                onPress={handleSavePreferences}
+                disabled={isSavingPref}
+              >
+                {isSavingPref ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.fullProfileBtnText}>Save Preferences & Refresh Feed</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -318,6 +537,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  prefBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(115, 92, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(115, 92, 0, 0.2)',
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  prefBannerTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+  },
+  prefBannerSub: {
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    marginTop: 2,
+  },
+  prefBannerBtn: {
+    backgroundColor: Colors.light.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prefBannerBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   appBar: {
     flexDirection: 'row',
