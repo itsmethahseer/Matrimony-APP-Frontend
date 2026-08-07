@@ -211,7 +211,7 @@ export default function ProfileDetailsScreen() {
 
   // Get primary photo
   const primaryPhoto = profile.photos?.find((p) => p.is_main)?.url || 
-                       (profile.photos && profile.photos.length > 0 ? profile.photos[0].url : 'https://via.placeholder.com/400');
+                       (profile.photos && profile.photos.length > 0 ? profile.photos[0].url : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80');
 
   // Verify online status (active in last 5 minutes)
   const isOnline = (new Date().getTime() - new Date(profile.last_active_at).getTime()) < 5 * 60 * 1000;

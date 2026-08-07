@@ -5,6 +5,7 @@ import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '@/constants/theme';
 import { registerAlertListener, AlertButton } from '../utils/alert';
+import { onUnauthorized } from '@/services/api';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -54,6 +55,15 @@ export default function RootLayout() {
       isMounted = false;
     };
   }, [segments]);
+
+  // Handle unauthorized/expired token events by clearing auth state and redirecting to login
+  useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      setIsAuthenticated(false);
+      router.replace('/login');
+    });
+    return unsubscribe;
+  }, []);
 
   // Register Alert Listener for custom modals on Web
   useEffect(() => {

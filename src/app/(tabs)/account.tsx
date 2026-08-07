@@ -714,7 +714,7 @@ export default function AccountScreen() {
   }
 
   // Get user avatar or placeholder
-  const avatarUrl = userData?.photos?.find((p: any) => p.is_main)?.url || 'https://via.placeholder.com/150';
+  const avatarUrl = userData?.photos?.find((p: any) => p.is_main)?.url || 'https://images.unsplash.com/photo-1506794778244-f4e3c50a1018?auto=format&fit=crop&w=400&q=80';
   const isVerified = userData?.id_verification_status === 'Verified';
 
   return (

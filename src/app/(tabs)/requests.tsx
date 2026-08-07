@@ -72,7 +72,7 @@ export default function RequestsScreen() {
     const sender = item.sender_profile;
     if (!sender) return null;
 
-    const mainPhoto = sender.photos?.find((p) => p.is_main)?.url || 'https://via.placeholder.com/100';
+    const mainPhoto = sender.photos?.find((p) => p.is_main)?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
 
     return (
       <View style={styles.card}>

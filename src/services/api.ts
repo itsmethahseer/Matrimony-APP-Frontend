@@ -52,6 +52,21 @@ export const removeToken = async (): Promise<void> => {
   }
 };
 
+type AuthEventListener = () => void;
+const authListeners: Set<AuthEventListener> = new Set();
+
+export const onUnauthorized = (listener: AuthEventListener) => {
+  authListeners.add(listener);
+  return () => {
+    authListeners.delete(listener);
+  };
+};
+
+const notifyUnauthorized = () => {
+  authListeners.forEach((fn) => fn());
+};
+
+
 // Core request wrapper
 async function apiRequest<T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -108,6 +123,10 @@ async function apiRequest<T = any>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      await removeToken();
+      notifyUnauthorized();
+    }
     let errorMsg = 'Network request failed';
     if (resBody) {
       if (typeof resBody.detail === 'string') {
@@ -180,6 +199,10 @@ export const api = {
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        await removeToken();
+        notifyUnauthorized();
+      }
       throw new Error(resBody?.detail || 'File upload failed');
     }
     return resBody;

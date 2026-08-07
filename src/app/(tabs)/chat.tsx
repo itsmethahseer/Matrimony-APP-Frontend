@@ -172,7 +172,7 @@ export default function ChatScreen() {
   };
 
   const renderConversationItem = ({ item }: { item: Conversation }) => {
-    const avatar = item.participant.photo_url || 'https://via.placeholder.com/100';
+    const avatar = item.participant.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
     const isUnread = item.unread_count > 0;
     
     // Format message timestamp
@@ -236,7 +236,7 @@ export default function ChatScreen() {
             </TouchableOpacity>
             
             <Image 
-              source={{ uri: activeChatUser.photo_url || 'https://via.placeholder.com/100' }} 
+              source={{ uri: activeChatUser.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' }} 
               style={styles.chatHeaderAvatar} 
             />
             
