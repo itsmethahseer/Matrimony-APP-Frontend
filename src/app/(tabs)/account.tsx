@@ -199,6 +199,9 @@ export default function AccountScreen() {
 
       const profile = await api.getMyProfile();
       setMyProfile(profile);
+      if (profile && profile.photos) {
+        setPhotosList(profile.photos);
+      }
     } catch (error: any) {
       console.error(error);
     } finally {
@@ -782,8 +785,13 @@ export default function AccountScreen() {
     );
   }
 
-  // Get user avatar or placeholder
-  const avatarUrl = userData?.photos?.find((p: any) => p.is_main)?.url || 'https://images.unsplash.com/photo-1506794778244-f4e3c50a1018?auto=format&fit=crop&w=400&q=80';
+  // Get user main avatar DP photo from photosList, myProfile, or fallback placeholder
+  const avatarUrl = photosList.find((p: any) => p.is_main)?.url ||
+                    (photosList.length > 0 ? photosList[0].url : null) ||
+                    myProfile?.photos?.find((p: any) => p.is_main)?.url ||
+                    (myProfile?.photos && myProfile.photos.length > 0 ? myProfile.photos[0].url : null) ||
+                    userData?.photos?.find((p: any) => p.is_main)?.url ||
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
   const isVerified = userData?.id_verification_status === 'Verified';
 
   return (
