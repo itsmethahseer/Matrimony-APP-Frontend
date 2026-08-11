@@ -108,7 +108,11 @@ export default function LoginScreen() {
     try {
       const res = await api.sendOTP(phoneNumber.trim());
       setOtpSent(true);
-      setOtpNotice(`✅ OTP Code sent! For testing, use code: ${res.otp_debug || '123456'}`);
+      if (res.otp_debug) {
+        setOtpNotice(`✅ OTP Code sent! For testing, use code: ${res.otp_debug}`);
+      } else {
+        setOtpNotice(`✅ OTP Code sent via SMS! Please check your mobile phone.`);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to send OTP.');
     } finally {
