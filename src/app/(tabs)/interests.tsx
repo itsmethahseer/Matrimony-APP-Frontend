@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
@@ -188,6 +189,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   appBar: {
     paddingHorizontal: 20,

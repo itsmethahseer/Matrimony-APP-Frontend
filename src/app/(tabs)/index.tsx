@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,7 +41,7 @@ interface Profile {
   gender: string;
   present_location?: string;
   profession?: string;
-  photos?: Array<{ url: string; is_main: boolean }>;
+  photos?: Array<{ id?: number; url: string; is_main?: boolean; is_approved?: boolean }>;
   about?: string;
   education?: string;
   religion?: string;
@@ -48,7 +49,143 @@ interface Profile {
   height?: number;
   weight?: number;
   marital_status?: string;
+  caste?: string;
+  sub_caste?: string;
 }
+
+interface ProfileCardProps {
+  item: Profile;
+  onPreview: (profile: Profile) => void;
+  onPass: (profileId: number, userId: number) => void;
+  onChat: (userId: number) => void;
+  onLike: (profileId: number, userId: number) => void;
+}
+
+const ProfileCardItem = ({ item, onPreview, onPass, onChat, onLike }: ProfileCardProps) => {
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const userPhotos = (item.photos && item.photos.length > 0)
+    ? item.photos
+    : [{ id: 0, url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80', is_approved: true }];
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.imageContainer}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
+          onScroll={(e) => {
+            const slideSize = e.nativeEvent.layoutMeasurement.width;
+            if (slideSize > 0) {
+              const index = Math.round(e.nativeEvent.contentOffset.x / slideSize);
+              if (index !== activePhotoIdx && index >= 0 && index < userPhotos.length) {
+                setActivePhotoIdx(index);
+              }
+            }
+          }}
+          scrollEventThrottle={16}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {userPhotos.map((photo: any, idx: number) => (
+            <TouchableOpacity
+              key={photo.id || idx}
+              activeOpacity={0.95}
+              onPress={() => onPreview(item)}
+              style={{ width: Math.min(width - 40, 768), height: '100%', position: 'relative' }}
+            >
+              <Image source={{ uri: photo.url }} style={styles.image} resizeMode="cover" />
+              {photo.is_approved === false && (
+                <View style={{ position: 'absolute', top: 50, left: 16, right: 16, backgroundColor: '#fffbe6', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ffe58f', zIndex: 10 }}>
+                  <Text style={{ color: '#d48806', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+                    ⏳ Photo will be verified shortly
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Photos Pagination Dots Indicator */}
+        {userPhotos.length > 1 && (
+          <View style={{
+            position: 'absolute',
+            top: 14,
+            left: 0,
+            right: 0,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 6,
+            zIndex: 20
+          }} pointerEvents="none">
+            {userPhotos.map((_, dotIdx) => (
+              <View
+                key={dotIdx}
+                style={{
+                  width: activePhotoIdx === dotIdx ? 18 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: activePhotoIdx === dotIdx ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                }}
+              />
+            ))}
+          </View>
+        )}
+
+        <View style={styles.gradientOverlay} pointerEvents="none" />
+
+        <View style={styles.badge} pointerEvents="none">
+          <Ionicons name="shield-checkmark" size={12} color={Colors.light.secondaryContainer} />
+          <Text style={styles.badgeText}>Verified</Text>
+        </View>
+
+        <TouchableOpacity 
+          style={styles.profileTextInfo}
+          activeOpacity={0.9}
+          onPress={() => onPreview(item)}
+        >
+          <Text style={styles.profileName}>{item.name}, {item.age}</Text>
+          {item.present_location && (
+            <View style={styles.infoRow}>
+              <Ionicons name="location-sharp" size={14} color="#ccc" />
+              <Text style={styles.infoText}>{item.present_location}</Text>
+            </View>
+          )}
+          {item.profession && (
+            <View style={styles.infoRow}>
+              <Ionicons name="briefcase-sharp" size={14} color="#ccc" />
+              <Text style={styles.infoText}>{item.profession}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.actionContainer}>
+        <TouchableOpacity 
+          style={styles.actionButtonCircle}
+          onPress={() => onPass(item.id, item.user_id)}
+        >
+          <Ionicons name="close" size={24} color={Colors.light.textSecondary} />
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity 
+            style={[styles.actionButtonCircle, { backgroundColor: 'rgba(87, 0, 19, 0.05)' }]}
+            onPress={() => onChat(item.user_id)}
+          >
+            <Ionicons name="chatbubble" size={20} color={Colors.light.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.actionButtonCircle, styles.likeBtn]}
+            onPress={() => onLike(item.id, item.user_id)}
+          >
+            <Ionicons name="heart" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 const CATEGORIES = [
   { id: 'my_matches', label: 'My Matches' },
@@ -171,68 +308,17 @@ export default function DiscoverScreen() {
   };
 
   const renderProfileCard = ({ item }: { item: Profile }) => {
-    // Get main photo or fallback to a placeholder
-    const mainPhoto = item.photos?.find((p) => p.is_main)?.url || 
-                      (item.photos && item.photos.length > 0 ? item.photos[0].url : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80');
-
     return (
-      <TouchableOpacity 
-        style={styles.card}
-        activeOpacity={0.95}
-        onPress={() => {
-          setPreviewProfile(item);
+      <ProfileCardItem
+        item={item}
+        onPreview={(p) => {
+          setPreviewProfile(p);
           setPreviewModalVisible(true);
         }}
-      >
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: mainPhoto }} style={styles.image} />
-          <View style={styles.gradientOverlay} />
-          
-          <View style={styles.badge}>
-            <Ionicons name="shield-checkmark" size={12} color={Colors.light.secondaryContainer} />
-            <Text style={styles.badgeText}>Verified</Text>
-          </View>
-
-          <View style={styles.profileTextInfo}>
-            <Text style={styles.profileName}>{item.name}, {item.age}</Text>
-            {item.present_location && (
-              <View style={styles.infoRow}>
-                <Ionicons name="location-sharp" size={14} color="#ccc" />
-                <Text style={styles.infoText}>{item.present_location}</Text>
-              </View>
-            )}
-            {item.profession && (
-              <View style={styles.infoRow}>
-                <Ionicons name="briefcase-sharp" size={14} color="#ccc" />
-                <Text style={styles.infoText}>{item.profession}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.actionContainer}>
-          <TouchableOpacity 
-            style={styles.actionButtonCircle}
-            onPress={() => handlePass(item.id, item.user_id)}
-          >
-            <Ionicons name="close" size={24} color={Colors.light.textSecondary} />
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity 
-              style={[styles.actionButtonCircle, { backgroundColor: 'rgba(87, 0, 19, 0.05)' }]}
-              onPress={() => handleChat(item.user_id)}
-            >
-              <Ionicons name="chatbubble" size={20} color={Colors.light.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.actionButtonCircle, styles.likeBtn]}
-              onPress={() => handleLike(item.id, item.user_id)}
-            >
-              <Ionicons name="heart" size={22} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
+        onPass={handlePass}
+        onChat={handleChat}
+        onLike={handleLike}
+      />
     );
   };
 
@@ -537,6 +623,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   prefBanner: {
     flexDirection: 'row',

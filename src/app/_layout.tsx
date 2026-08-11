@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View, useColorScheme, TouchableOpacity, Modal, Text } from 'react-native';
 import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/theme';
 import { registerAlertListener, AlertButton } from '../utils/alert';
 import { onUnauthorized } from '@/services/api';
@@ -77,7 +78,8 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: Colors.light.background }}>
+        <StatusBar style="dark" animated />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="login" options={{ gestureEnabled: false }} />
           <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
