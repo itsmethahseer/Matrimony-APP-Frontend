@@ -228,6 +228,8 @@ export const api = {
   
   getProfileById: (id: number) => apiRequest('GET', `/api/profiles/${id}`),
   
+  getProfileByUserId: (userId: number) => apiRequest('GET', `/api/profiles/user/${userId}`),
+  
   // Photos
   getPhotos: () => apiRequest('GET', '/api/profiles/photos'),
   

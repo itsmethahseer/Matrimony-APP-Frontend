@@ -133,7 +133,7 @@ export default function ChatScreen() {
         openChat(targetConv.participant);
       } else {
         // If no existing conversation, load profile details to start a blank chat
-        const profile = await api.getProfileById(targetId);
+        const profile = await api.getProfileByUserId(targetId);
         openChat({
           id: profile.user_id,
           name: profile.name,
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'android' ? 120 : 100,
   },
   convItem: {
     flexDirection: 'row',

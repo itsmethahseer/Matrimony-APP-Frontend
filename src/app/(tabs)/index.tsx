@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'android' ? 120 : 100,
   },
   card: {
     backgroundColor: '#fff',

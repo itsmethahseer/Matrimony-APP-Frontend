@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'android' ? 120 : 100,
     paddingTop: 10,
   },
   card: {

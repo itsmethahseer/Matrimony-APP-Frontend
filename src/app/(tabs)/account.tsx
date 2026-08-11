@@ -2455,7 +2455,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 60,
+    paddingBottom: Platform.OS === 'android' ? 120 : 100,
   },
   profileHeader: {
     alignItems: 'center',
