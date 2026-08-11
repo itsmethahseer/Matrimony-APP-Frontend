@@ -322,4 +322,30 @@ export const api = {
     apiRequest('POST', `/api/admin/verify-photo/${photoId}`, { action }),
     
   getAdminUsers: () => apiRequest<any[]>('GET', '/api/admin/users'),
+
+  // Google, Phone OTP, and Forgot Password
+  googleAuth: async (email: string, google_id: string, name?: string, photo_url?: string) => {
+    const res = await apiRequest<{ access_token: string }>('POST', '/api/auth/google-auth', { email, google_id, name, photo_url });
+    if (res.access_token) {
+      await setToken(res.access_token);
+    }
+    return res;
+  },
+
+  sendOTP: (phone_number: string) => 
+    apiRequest<{ message: string; otp_debug?: string }>('POST', '/api/auth/send-otp', { phone_number }),
+
+  verifyOTP: async (phone_number: string, otp_code: string) => {
+    const res = await apiRequest<{ access_token: string }>('POST', '/api/auth/verify-otp', { phone_number, otp_code });
+    if (res.access_token) {
+      await setToken(res.access_token);
+    }
+    return res;
+  },
+
+  forgotPassword: (identifier: string, method: 'email' | 'whatsapp' = 'email') =>
+    apiRequest<{ message: string; reset_token?: string; reset_code_debug?: string }>('POST', '/api/auth/forgot-password', { identifier, method }),
+
+  resetPassword: (identifier: string, reset_token: string, new_password: string) =>
+    apiRequest<{ message: string }>('POST', '/api/auth/reset-password', { identifier, reset_token, new_password }),
 };

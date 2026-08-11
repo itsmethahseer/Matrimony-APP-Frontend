@@ -1,7 +1,27 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-import { Platform } from 'react-native';
+import { Platform, ViewStyle } from 'react-native';
+
+export const DEFAULT_TAB_BAR_STYLE: ViewStyle = {
+  position: Platform.OS === 'web' ? 'relative' : 'absolute',
+  bottom: Platform.OS === 'ios' ? 22 : (Platform.OS === 'android' ? 14 : 0),
+  left: Platform.OS === 'web' ? 0 : 16,
+  right: Platform.OS === 'web' ? 0 : 16,
+  height: Platform.OS === 'ios' ? 68 : 64,
+  backgroundColor: '#ffffff',
+  borderRadius: Platform.OS === 'web' ? 0 : 28,
+  borderTopWidth: Platform.OS === 'web' ? 1 : 0,
+  borderTopColor: '#e2e8f0',
+  paddingBottom: Platform.OS === 'ios' ? 10 : 8,
+  paddingTop: 8,
+  paddingHorizontal: 8,
+  elevation: 10,
+  shadowColor: '#0f172a',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.12,
+  shadowRadius: 16,
+};
 
 export default function TabsLayout() {
   return (
@@ -9,25 +29,7 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors.light.primary,
         tabBarInactiveTintColor: Colors.light.textSecondary,
-        tabBarStyle: {
-          position: Platform.OS === 'web' ? 'relative' : 'absolute',
-          bottom: Platform.OS === 'ios' ? 22 : (Platform.OS === 'android' ? 14 : 0),
-          left: Platform.OS === 'web' ? 0 : 16,
-          right: Platform.OS === 'web' ? 0 : 16,
-          height: Platform.OS === 'ios' ? 68 : 64,
-          backgroundColor: '#ffffff',
-          borderRadius: Platform.OS === 'web' ? 0 : 28,
-          borderTopWidth: Platform.OS === 'web' ? 1 : 0,
-          borderTopColor: '#e2e8f0',
-          paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-          paddingTop: 8,
-          paddingHorizontal: 8,
-          elevation: 10,
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-        },
+        tabBarStyle: DEFAULT_TAB_BAR_STYLE,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: 'bold',

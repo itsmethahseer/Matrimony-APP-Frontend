@@ -13,12 +13,15 @@ import {
   Platform,
   ScrollView,
   StatusBar as RNStatusBar,
+  BackHandler,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
 import { Colors } from '@/constants/theme';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Alert } from '../../utils/alert';
+import { DEFAULT_TAB_BAR_STYLE } from './_layout';
 
 interface ChatParticipant {
   id: number;
@@ -49,6 +52,8 @@ interface Conversation {
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const autoChatId = params.autoChatId ? Number(params.autoChatId) : null;
+  const router = useRouter();
+  const navigation = useNavigation();
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'requests' | 'chats' | 'calls'>('all');
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -62,6 +67,41 @@ export default function ChatScreen() {
   
   const pollingRef = useRef<any>(null);
   const flatListRef = useRef<FlatList | null>(null);
+  const autoChatProcessedRef = useRef<number | null>(null);
+
+  // Hide the parent bottom tabs layout when an active user chat is open
+  useEffect(() => {
+    const parentNav = navigation.getParent();
+    if (activeChatUser) {
+      parentNav?.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+    } else {
+      parentNav?.setOptions({
+        tabBarStyle: DEFAULT_TAB_BAR_STYLE,
+      });
+    }
+
+    return () => {
+      parentNav?.setOptions({
+        tabBarStyle: DEFAULT_TAB_BAR_STYLE,
+      });
+    };
+  }, [activeChatUser, navigation]);
+
+  // Handle hardware back button press on Android to close active chat
+  useEffect(() => {
+    const onBackPress = () => {
+      if (activeChatUser) {
+        closeChat();
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [activeChatUser]);
 
   const loadConversations = async () => {
     setIsLoading(true);
@@ -80,7 +120,8 @@ export default function ChatScreen() {
       setConversations(filteredData);
 
       // Handle automatic chat launch if navigated from Discover button
-      if (autoChatId && !activeChatUser) {
+      if (autoChatId && !activeChatUser && autoChatProcessedRef.current !== autoChatId) {
+        autoChatProcessedRef.current = autoChatId;
         const targetConv = data.find((c: any) => c.participant.id === autoChatId);
         if (targetConv) {
           openChat(targetConv.participant);
@@ -153,6 +194,7 @@ export default function ChatScreen() {
     setActiveChatUser(null);
     setMessages([]);
     setInputText('');
+    router.setParams({ autoChatId: '' });
     loadConversations(); // refresh unread badges
   };
 
@@ -222,96 +264,6 @@ export default function ChatScreen() {
     );
   };
 
-  // Render active chat overlay/window
-  if (activeChatUser) {
-    return (
-      <SafeAreaView style={styles.chatWindow}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
-          {/* Chat Header */}
-          <View style={styles.chatHeader}>
-            <TouchableOpacity onPress={closeChat} style={styles.chatBackBtn}>
-              <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
-            </TouchableOpacity>
-            
-            <Image 
-              source={{ uri: activeChatUser.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' }} 
-              style={styles.chatHeaderAvatar} 
-            />
-            
-            <View style={styles.chatHeaderDetails}>
-              <Text style={styles.chatHeaderName}>{activeChatUser.name}</Text>
-              <Text style={styles.chatHeaderStatus}>
-                {activeChatUser.is_online ? 'Online Now' : 'Active recently'}
-              </Text>
-            </View>
-            
-            <TouchableOpacity style={styles.chatCallBtn}>
-              <Ionicons name="call-outline" size={20} color={Colors.light.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Messages timeline */}
-          {isMessagesLoading ? (
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color={Colors.light.primary} />
-            </View>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
-                const isMine = item.sender_id !== activeChatUser.id;
-                
-                let text = item.message_text;
-                if (item.message_type === 'call') {
-                  const min = Math.ceil((item.call_duration || 0) / 60);
-                  text = `📞 Call Completed: ${min} minute(s)`;
-                } else if (item.message_type === 'request') {
-                  text = `📬 Connection Request sent.`;
-                }
-
-                return (
-                  <View style={[styles.messageBubbleContainer, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
-                    <View style={[styles.messageBubble, isMine ? styles.myBubble : styles.theirBubble]}>
-                      <Text style={[styles.messageText, isMine ? styles.myMessageText : styles.theirMessageText]}>
-                        {text}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            />
-          )}
-
-          {/* Chat Input */}
-          <View style={styles.chatInputBar}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Type your message..."
-              placeholderTextColor="#999"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-            />
-            <TouchableOpacity 
-              style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
-              onPress={handleSend}
-              disabled={!inputText.trim()}
-            >
-              <Ionicons name="send" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.appBar}>
@@ -365,6 +317,102 @@ export default function ChatScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Full-screen Chat Modal Overlay */}
+      <Modal
+        visible={!!activeChatUser}
+        animationType="slide"
+        onRequestClose={closeChat}
+        statusBarTranslucent
+      >
+        <SafeAreaView style={styles.chatWindow}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
+            style={{ flex: 1 }}
+          >
+            {/* Chat Header */}
+            {activeChatUser && (
+              <View style={styles.chatHeader}>
+                <TouchableOpacity onPress={closeChat} style={styles.chatBackBtn}>
+                  <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
+                </TouchableOpacity>
+                
+                <Image 
+                  source={{ uri: activeChatUser.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' }} 
+                  style={styles.chatHeaderAvatar} 
+                />
+                
+                <View style={styles.chatHeaderDetails}>
+                  <Text style={styles.chatHeaderName}>{activeChatUser.name}</Text>
+                  <Text style={styles.chatHeaderStatus}>
+                    {activeChatUser.is_online ? 'Online Now' : 'Active recently'}
+                  </Text>
+                </View>
+                
+                <TouchableOpacity style={styles.chatCallBtn}>
+                  <Ionicons name="call-outline" size={20} color={Colors.light.primary} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Messages timeline */}
+            {isMessagesLoading ? (
+              <View style={styles.centered}>
+                <ActivityIndicator size="large" color={Colors.light.primary} />
+              </View>
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => {
+                  if (!activeChatUser) return null;
+                  const isMine = item.sender_id !== activeChatUser.id;
+                  
+                  let text = item.message_text;
+                  if (item.message_type === 'call') {
+                    const min = Math.ceil((item.call_duration || 0) / 60);
+                    text = `📞 Call Completed: ${min} minute(s)`;
+                  } else if (item.message_type === 'request') {
+                    text = `📬 Connection Request sent.`;
+                  }
+
+                  return (
+                    <View style={[styles.messageBubbleContainer, isMine ? styles.bubbleRight : styles.bubbleLeft]}>
+                      <View style={[styles.messageBubble, isMine ? styles.myBubble : styles.theirBubble]}>
+                        <Text style={[styles.messageText, isMine ? styles.myMessageText : styles.theirMessageText]}>
+                          {text}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}
+                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              />
+            )}
+
+            {/* Chat Input */}
+            <View style={styles.chatInputBar}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type your message..."
+                placeholderTextColor="#999"
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+              />
+              <TouchableOpacity 
+                style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+                onPress={handleSend}
+                disabled={!inputText.trim()}
+              >
+                <Ionicons name="send" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -513,6 +561,7 @@ const styles = StyleSheet.create({
   chatWindow: {
     flex: 1,
     backgroundColor: '#fff8f5',
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   chatHeader: {
     flexDirection: 'row',
@@ -597,7 +646,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: 'rgba(233, 225, 220, 0.3)',
