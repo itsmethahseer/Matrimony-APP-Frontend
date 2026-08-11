@@ -838,43 +838,49 @@ export default function AccountScreen() {
             <View>
               <Text style={styles.membershipTierLabel}>CURRENT TIER</Text>
               <Text style={styles.membershipTierName}>
-                {summary.plan_type ? `${summary.plan_type} Member` : 'Free Account'}
+                {userData?.is_admin ? 'Administrator' : (summary.plan_type ? `${summary.plan_type} Member` : 'Free Account')}
               </Text>
             </View>
-            <Ionicons name="ribbon-sharp" size={32} color={Colors.light.secondaryContainer} />
+            <Ionicons name={userData?.is_admin ? "shield-checkmark" : "ribbon-sharp"} size={32} color={userData?.is_admin ? Colors.light.primary : Colors.light.secondaryContainer} />
           </View>
 
           <View style={styles.quotaGrid}>
             <View style={styles.quotaBox}>
               <Text style={styles.quotaLabel}>CREDITS</Text>
               <Text style={styles.quotaValue}>
-                {summary.credits === 9999 ? '∞' : (summary.credits ?? 0)}
+                {userData?.is_admin || summary.credits >= 9999 ? '∞' : (summary.credits ?? 0)}
               </Text>
             </View>
             <View style={styles.quotaBox}>
               <Text style={styles.quotaLabel}>MESSAGES</Text>
               <Text style={styles.quotaValue}>
-                {summary.remaining_messages === 9999 ? '∞' : summary.remaining_messages}
+                {userData?.is_admin || summary.remaining_messages >= 9999 ? '∞' : summary.remaining_messages}
               </Text>
             </View>
             <View style={styles.quotaBox}>
               <Text style={styles.quotaLabel}>MINUTES</Text>
-              <Text style={styles.quotaValue}>{summary.remaining_call_time}</Text>
+              <Text style={styles.quotaValue}>
+                {userData?.is_admin || summary.remaining_call_time >= 9999 ? '∞' : summary.remaining_call_time}
+              </Text>
             </View>
           </View>
 
           <View style={styles.membershipFooter}>
             <Text style={styles.validityText}>
-              {summary.plan_validity 
-                ? `Valid until: ${new Date(summary.plan_validity).toLocaleDateString()}` 
-                : 'Subscribe to view profiles'}
+              {userData?.is_admin 
+                ? '★ Unlimited Admin Access'
+                : (summary.plan_validity 
+                  ? `Valid until: ${new Date(summary.plan_validity).toLocaleDateString()}` 
+                  : 'Subscribe to view profiles')}
             </Text>
-            <TouchableOpacity 
-              style={styles.upgradeBtn}
-              onPress={() => setSubModalVisible(true)}
-            >
-              <Text style={styles.upgradeBtnText}>Upgrade</Text>
-            </TouchableOpacity>
+            {!userData?.is_admin && (
+              <TouchableOpacity 
+                style={styles.upgradeBtn}
+                onPress={() => setSubModalVisible(true)}
+              >
+                <Text style={styles.upgradeBtnText}>Upgrade</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -905,7 +911,10 @@ export default function AccountScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={openEditProfile}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="create-outline" size={22} color={Colors.light.primary} />
-              <Text style={styles.menuItemText}>Edit Profile Details</Text>
+              <View>
+                <Text style={styles.menuItemText}>Edit Profile Details</Text>
+                <Text style={styles.menuItemSubtext}>Personal info, education, family & lifestyle</Text>
+              </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
@@ -913,10 +922,10 @@ export default function AccountScreen() {
           <TouchableOpacity 
             style={styles.menuItem} 
             onPress={() => {
-              if (myProfile) {
+              if (myProfile?.id) {
                 router.push(`/profile/${myProfile.id}`);
               } else {
-                Alert.alert('Loading', 'Profile details are loading, please try again.');
+                Alert.alert('Profile Preview', 'Your profile details are loading. Please try again in a moment.');
               }
             }}
           >
@@ -927,13 +936,15 @@ export default function AccountScreen() {
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => setSubModalVisible(true)}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="card-outline" size={22} color={Colors.light.primary} />
-              <Text style={styles.menuItemText}>Subscriptions & Billing</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
-          </TouchableOpacity>
+          {!userData?.is_admin && (
+            <TouchableOpacity style={styles.menuItem} onPress={() => setSubModalVisible(true)}>
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="card-outline" size={22} color={Colors.light.primary} />
+                <Text style={styles.menuItemText}>Subscriptions & Billing</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity style={styles.menuItem} onPress={() => setVerifyModalVisible(true)}>
             <View style={styles.menuItemLeft}>
