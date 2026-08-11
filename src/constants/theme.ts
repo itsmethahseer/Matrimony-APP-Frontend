@@ -4,46 +4,46 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#1e1b18',                  // on-surface dark text
-    textSecondary: '#584141',         // secondary text
-    onSurfaceVariant: '#584141',
-    background: '#fff8f5',            // SoulMate peach background
-    primary: '#570013',               // deep maroon
-    secondary: '#735c00',             // gold
-    secondaryContainer: '#fed65b',    // light gold container
-    onSecondaryContainer: '#745c00',
-    backgroundElement: '#fbf2ed',
-    backgroundSelected: '#f5ece7',
-    surface: '#fff8f5',
-    surfaceVariant: '#e9e1dc',
-    surfaceContainerLow: '#fbf2ed',
-    surfaceContainer: '#f5ece7',      // container grey/peach
-    outlineVariant: '#e0bfbf',
+    text: '#0f172a',                  // Slate dark text
+    textSecondary: '#475569',         // Slate secondary text
+    onSurfaceVariant: '#475569',
+    background: '#f8fafc',            // HelpMeet crisp slate background
+    primary: '#065f46',               // Deep Royal Emerald Green
+    secondary: '#d97706',             // Warm Golden Amber
+    secondaryContainer: '#fef3c7',    // Light Gold Container
+    onSecondaryContainer: '#78350f',
+    backgroundElement: '#f1f5f9',
+    backgroundSelected: '#e2e8f0',
+    surface: '#ffffff',               // Pure White Card Surface
+    surfaceVariant: '#e2e8f0',
+    surfaceContainerLow: '#f8fafc',
+    surfaceContainer: '#f1f5f9',      // Slate Container
+    outlineVariant: '#cbd5e1',
     emerald: '#10b981',               // online indicator
     white: '#ffffff',
-    error: '#ba1a1a',
-    onPrimaryContainer: '#ff828a',
+    error: '#ef4444',
+    onPrimaryContainer: '#34d399',
   },
   dark: {
-    text: '#f8efea',                  // light cream text
-    textSecondary: '#a9a8a4',
-    onSurfaceVariant: '#a9a8a4',
-    background: '#1b1a18',            // dark grey/brown background
-    primary: '#ffdada',               // primary-fixed-dim
-    secondary: '#e9c349',             // secondary-fixed-dim
-    secondaryContainer: '#745c00',
-    onSecondaryContainer: '#ffe088',
-    backgroundElement: '#3d3d3b',
-    backgroundSelected: '#474744',
-    surface: '#24201e',
-    surfaceVariant: '#3d3d3b',
-    surfaceContainerLow: '#1e1b18',
-    surfaceContainer: '#34302c',
-    outlineVariant: '#474744',
+    text: '#f8fafc',                  // Light cream/white text
+    textSecondary: '#94a3b8',
+    onSurfaceVariant: '#94a3b8',
+    background: '#0f172a',            // Dark Slate background
+    primary: '#34d399',               // Emerald Glow Primary
+    secondary: '#fbbf24',             // Bright Amber Gold
+    secondaryContainer: '#78350f',
+    onSecondaryContainer: '#fef3c7',
+    backgroundElement: '#1e293b',
+    backgroundSelected: '#334155',
+    surface: '#1e293b',
+    surfaceVariant: '#334155',
+    surfaceContainerLow: '#0f172a',
+    surfaceContainer: '#1e293b',
+    outlineVariant: '#475569',
     emerald: '#10b981',
     white: '#ffffff',
-    error: '#ffdad6',
-    onPrimaryContainer: '#40000b',
+    error: '#f87171',
+    onPrimaryContainer: '#064e3b',
   },
 } as const;
 

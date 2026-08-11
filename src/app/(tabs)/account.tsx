@@ -14,7 +14,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { api, removeToken } from '@/services/api';
+import { api, API_URL, removeToken } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -56,6 +56,14 @@ export default function AccountScreen() {
   
   // Support data state
   const [supportData, setSupportData] = useState<any>(null);
+
+  // Admin Console States
+  const [adminModalVisible, setAdminModalVisible] = useState(false);
+  const [adminActiveTab, setAdminActiveTab] = useState<'docs' | 'photos' | 'users'>('docs');
+  const [adminPendingDocs, setAdminPendingDocs] = useState<any[]>([]);
+  const [adminPendingPhotos, setAdminPendingPhotos] = useState<any[]>([]);
+  const [adminUsersList, setAdminUsersList] = useState<any[]>([]);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
 
   // Verification form state
   const [selectedFile, setSelectedFile] = useState<any>(null);
@@ -222,9 +230,69 @@ export default function AccountScreen() {
   };
 
   const getPlanPrice = (plan: 'Silver' | 'Gold' | 'Platinum') => {
-    if (plan === 'Silver') return 1499;
-    if (plan === 'Gold') return 2999;
-    return 5499;
+    if (plan === 'Silver') return 299;
+    if (plan === 'Gold') return 1299;
+    return 2499;
+  };
+
+  const loadAdminData = async () => {
+    setIsAdminLoading(true);
+    try {
+      const verifications = await api.getPendingVerifications();
+      setAdminPendingDocs(verifications.documents || []);
+      setAdminPendingPhotos(verifications.photos || []);
+      const users = await api.getAdminUsers();
+      setAdminUsersList(users || []);
+    } catch (err: any) {
+      Alert.alert('Admin Access', err.message || 'Failed to load admin verification data.');
+    } finally {
+      setIsAdminLoading(false);
+    }
+  };
+
+  const openAdminConsole = async () => {
+    setAdminModalVisible(true);
+    await loadAdminData();
+  };
+
+  const handleApproveDoc = async (userId: number) => {
+    try {
+      await api.verifyUserDoc(userId, 'approve');
+      Alert.alert('Approved', 'User document verified successfully!');
+      await loadAdminData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not approve document.');
+    }
+  };
+
+  const handleRejectDoc = async (userId: number) => {
+    try {
+      await api.verifyUserDoc(userId, 'reject');
+      Alert.alert('Rejected', 'User document request rejected.');
+      await loadAdminData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not reject document.');
+    }
+  };
+
+  const handleApprovePhoto = async (photoId: number) => {
+    try {
+      await api.verifyUserPhoto(photoId, 'approve');
+      Alert.alert('Approved', 'Photo approved successfully!');
+      await loadAdminData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not approve photo.');
+    }
+  };
+
+  const handleRejectPhoto = async (photoId: number) => {
+    try {
+      await api.verifyUserPhoto(photoId, 'reject');
+      Alert.alert('Rejected', 'Photo rejected and deleted.');
+      await loadAdminData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not reject photo.');
+    }
   };
 
   const handleSelectPlan = (plan: 'Silver' | 'Gold' | 'Platinum') => {
@@ -878,6 +946,23 @@ export default function AccountScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
+
+          {/* Admin Console Option */}
+          <TouchableOpacity 
+            style={[styles.menuItem, { backgroundColor: '#fffbe6', borderColor: '#ffe58f', borderWidth: 1 }]} 
+            onPress={openAdminConsole}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="shield-checkmark" size={22} color="#d48806" />
+              <View>
+                <Text style={[styles.menuItemText, { color: '#873800', fontWeight: 'bold' }]}>
+                  Admin Console {userData?.is_admin ? '(Admin Account)' : '(Validate Users)'}
+                </Text>
+                <Text style={styles.menuItemSubtext}>Validate user documents & uploaded photos</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#d48806" />
+          </TouchableOpacity>
         </View>
 
         {/* Logout Button */}
@@ -906,7 +991,7 @@ export default function AccountScreen() {
               <TouchableOpacity style={styles.planCard} onPress={() => handleSelectPlan('Silver')}>
                 <View style={styles.planHeader}>
                   <Text style={styles.planTitle}>Silver Plan</Text>
-                  <Text style={styles.planPrice}>₹1,499 / mo</Text>
+                  <Text style={styles.planPrice}>₹299 / mo</Text>
                 </View>
                  <Text style={styles.planDesc}>• 100 Contact Credits • 200 Messages • 60 Mins Calls • Validity: 30 days</Text>
               </TouchableOpacity>
@@ -915,7 +1000,7 @@ export default function AccountScreen() {
               <TouchableOpacity style={[styles.planCard, styles.goldPlanCard]} onPress={() => handleSelectPlan('Gold')}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: '#735c00' }]}>Gold Plan</Text>
-                  <Text style={[styles.planPrice, { color: '#735c00' }]}>₹2,999 / 3 mos</Text>
+                  <Text style={[styles.planPrice, { color: '#735c00' }]}>₹1,299 / 3 mos</Text>
                 </View>
                 <Text style={styles.planDesc}>• 500 Contact Credits • 1000 Messages • 300 Mins Calls • Validity: 90 days</Text>
               </TouchableOpacity>
@@ -924,7 +1009,7 @@ export default function AccountScreen() {
               <TouchableOpacity style={[styles.planCard, styles.platPlanCard]} onPress={() => handleSelectPlan('Platinum')}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: '#fff' }]}>Platinum Plan</Text>
-                  <Text style={[styles.planPrice, { color: '#fff' }]}>₹5,499 / 6 mos</Text>
+                  <Text style={[styles.planPrice, { color: '#fff' }]}>₹2,499 / 6 mos</Text>
                 </View>
                 <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Credits • Unlimited Messages • 1000 Mins Calls • Validity: 180 days</Text>
               </TouchableOpacity>
@@ -948,6 +1033,14 @@ export default function AccountScreen() {
               <Text style={styles.alertText}>
                 Upload your ID document image (identity card, passport, or license) to get the verified badge and gain trust from matches.
               </Text>
+              
+              {userData?.id_verification_status === "Pending" && (
+                <View style={{ backgroundColor: '#fffbe6', borderColor: '#ffe58f', borderWidth: 1, padding: 10, borderRadius: 8, marginBottom: 12 }}>
+                  <Text style={{ color: '#d48806', fontSize: 13, fontWeight: 'bold', textAlign: 'center' }}>
+                    ⏳ Your uploaded document will be verified shortly by our admin team.
+                  </Text>
+                </View>
+              )}
               
               <TouchableOpacity 
                 style={[styles.verifyInput, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', borderStyle: 'dashed', height: 80 }]}
@@ -1034,9 +1127,9 @@ export default function AccountScreen() {
                 <Text style={styles.checkoutSummaryLabel}>SELECTED PLAN</Text>
                 <Text style={styles.checkoutSummaryPlan}>{selectedPlan} Plan</Text>
                 <Text style={styles.checkoutSummaryPrice}>
-                  {selectedPlan === 'Silver' && '₹1,499'}
-                  {selectedPlan === 'Gold' && '₹2,999'}
-                  {selectedPlan === 'Platinum' && '₹5,499'}
+                  {selectedPlan === 'Silver' && '₹299'}
+                  {selectedPlan === 'Gold' && '₹1,299'}
+                  {selectedPlan === 'Platinum' && '₹2,499'}
                 </Text>
               </View>
 
@@ -1959,6 +2052,13 @@ export default function AccountScreen() {
                           <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>★ MAIN DP</Text>
                         </View>
                       )}
+                      {!photo.is_approved && (
+                        <View style={{ backgroundColor: '#fffbe6', paddingVertical: 4, paddingHorizontal: 6, alignItems: 'center', borderTopWidth: 1, borderColor: '#ffe58f' }}>
+                          <Text style={{ color: '#d48806', fontSize: 10, fontWeight: 'bold', textAlign: 'center' }}>
+                            ⏳ Your uploaded photo will be verified shortly
+                          </Text>
+                        </View>
+                      )}
                       <View style={{ padding: 8, gap: 6, backgroundColor: '#fdfbf7' }}>
                         {!photo.is_main && (
                           <TouchableOpacity
@@ -2124,6 +2224,199 @@ export default function AccountScreen() {
                 )}
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal 8: Admin Console */}
+      <Modal visible={adminModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.bottomSheet, { height: '88%' }]}>
+            <View style={styles.sheetHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="shield-checkmark" size={24} color="#b45309" />
+                <Text style={styles.sheetTitle}>Admin Validation Console</Text>
+              </View>
+              <TouchableOpacity onPress={() => setAdminModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Admin Tabs */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  backgroundColor: adminActiveTab === 'docs' ? Colors.light.primary : '#f3f4f6',
+                  alignItems: 'center',
+                }}
+                onPress={() => setAdminActiveTab('docs')}
+              >
+                <Text style={{ color: adminActiveTab === 'docs' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                  Pending ID Docs ({adminPendingDocs.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  backgroundColor: adminActiveTab === 'photos' ? Colors.light.primary : '#f3f4f6',
+                  alignItems: 'center',
+                }}
+                onPress={() => setAdminActiveTab('photos')}
+              >
+                <Text style={{ color: adminActiveTab === 'photos' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                  Pending Photos ({adminPendingPhotos.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  backgroundColor: adminActiveTab === 'users' ? Colors.light.primary : '#f3f4f6',
+                  alignItems: 'center',
+                }}
+                onPress={() => setAdminActiveTab('users')}
+              >
+                <Text style={{ color: adminActiveTab === 'users' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                  All Users ({adminUsersList.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {isAdminLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={Colors.light.primary} />
+                <Text style={{ marginTop: 10, color: Colors.light.textSecondary }}>Loading admin validation items...</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                {/* TAB 1: PENDING ID DOCUMENTS */}
+                {adminActiveTab === 'docs' && (
+                  <View>
+                    <Text style={styles.faqHeader}>PENDING USER ID DOCUMENTS ({adminPendingDocs.length})</Text>
+                    {adminPendingDocs.length === 0 ? (
+                      <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                        <Ionicons name="checkmark-done-circle-outline" size={44} color="#10b981" />
+                        <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>All Documents Verified!</Text>
+                        <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4 }}>No user ID documents currently pending approval.</Text>
+                      </View>
+                    ) : (
+                      adminPendingDocs.map((doc: any) => (
+                        <View key={doc.user_id} style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <View>
+                              <Text style={{ fontSize: 15, fontWeight: 'bold', color: Colors.light.text }}>{doc.user_name}</Text>
+                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>{doc.user_email} (ID: #{doc.user_id})</Text>
+                            </View>
+                            <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                              <Text style={{ color: '#b45309', fontSize: 11, fontWeight: 'bold' }}>⏳ Pending</Text>
+                            </View>
+                          </View>
+
+                          {doc.document_url ? (
+                            <Image 
+                              source={{ uri: doc.document_url.startsWith('http') ? doc.document_url : `${API_URL}${doc.document_url}` }} 
+                              style={{ width: '100%', height: 160, borderRadius: 8, marginVertical: 8, resizeMode: 'cover' }} 
+                            />
+                          ) : (
+                            <View style={{ height: 80, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center', borderRadius: 8, marginVertical: 8 }}>
+                              <Text style={{ color: Colors.light.textSecondary }}>No Document URL</Text>
+                            </View>
+                          )}
+
+                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                            <TouchableOpacity
+                              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                              onPress={() => handleApproveDoc(doc.user_id)}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Approve ID Document</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                              onPress={() => handleRejectDoc(doc.user_id)}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Reject Document</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                )}
+
+                {/* TAB 2: PENDING PROFILE PHOTOS */}
+                {adminActiveTab === 'photos' && (
+                  <View>
+                    <Text style={styles.faqHeader}>PENDING PROFILE PHOTOS ({adminPendingPhotos.length})</Text>
+                    {adminPendingPhotos.length === 0 ? (
+                      <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                        <Ionicons name="images-outline" size={44} color="#10b981" />
+                        <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>All Photos Approved!</Text>
+                        <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4 }}>No user profile photos currently pending validation.</Text>
+                      </View>
+                    ) : (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                        {adminPendingPhotos.map((photo: any) => (
+                          <View key={photo.photo_id} style={{ width: '47%', backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
+                            <Image source={{ uri: photo.photo_url }} style={{ width: '100%', height: 160, resizeMode: 'cover' }} />
+                            <View style={{ padding: 8, gap: 6 }}>
+                              <Text style={{ fontWeight: 'bold', fontSize: 13, color: Colors.light.text }} numberOfLines={1}>{photo.user_name}</Text>
+                              <Text style={{ fontSize: 10, color: Colors.light.textSecondary }} numberOfLines={1}>{photo.user_email}</Text>
+
+                              <TouchableOpacity
+                                style={{ backgroundColor: '#10b981', paddingVertical: 8, borderRadius: 6, alignItems: 'center', marginTop: 4 }}
+                                onPress={() => handleApprovePhoto(photo.photo_id)}
+                              >
+                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Approve Photo</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{ backgroundColor: '#ef4444', paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}
+                                onPress={() => handleRejectPhoto(photo.photo_id)}
+                              >
+                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Reject & Remove</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* TAB 3: ALL USERS DIRECTORY */}
+                {adminActiveTab === 'users' && (
+                  <View>
+                    <Text style={styles.faqHeader}>REGISTERED ACCOUNTS ({adminUsersList.length})</Text>
+                    {adminUsersList.map((usr: any) => (
+                      <View key={usr.id} style={{ backgroundColor: '#fff', padding: 12, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#eee', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontWeight: 'bold', fontSize: 14, color: Colors.light.text }}>{usr.name} {usr.is_admin ? '👑 (Admin)' : ''}</Text>
+                          <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{usr.email}</Text>
+                          <Text style={{ fontSize: 11, color: Colors.light.primary, marginTop: 2 }}>
+                            Plan: {usr.plan_type || 'Free'} | ID Status: {usr.id_verification_status}
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                          <Text style={{ fontSize: 11, color: '#059669', fontWeight: 'bold' }}>{usr.photos_count} Photos</Text>
+                          {usr.unapproved_photos_count > 0 && (
+                            <Text style={{ fontSize: 10, color: '#d97706', fontWeight: 'bold' }}>{usr.unapproved_photos_count} Pending</Text>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>

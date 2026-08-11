@@ -110,7 +110,7 @@ export default function RequestsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.appBar}>
-        <Text style={styles.logoText}>SoulMate</Text>
+        <Text style={styles.logoText}>HelpMeet</Text>
       </View>
 
       <View style={styles.headerTitleContainer}>

@@ -239,7 +239,7 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.appBar}>
-        <Text style={styles.logoText}>SoulMate</Text>
+        <Text style={styles.logoText}>HelpMeet</Text>
         <TouchableOpacity style={styles.notificationBtn}>
           <Ionicons name="notifications" size={22} color={Colors.light.primary} />
         </TouchableOpacity>

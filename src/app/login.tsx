@@ -63,7 +63,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           <View style={styles.headerSection}>
-            <Text style={styles.appName}>SoulMate</Text>
+            <Text style={styles.appName}>HelpMeet</Text>
             <Text style={styles.appTagline}>Premium Matrimony Discovery</Text>
           </View>
 
@@ -71,7 +71,7 @@ export default function LoginScreen() {
             <Text style={styles.cardTitle}>{isLogin ? 'Welcome Back' : 'Create Account'}</Text>
             <Text style={styles.cardSubtitle}>
               {isLogin 
-                ? 'Sign in to discover your perfect soulmate' 
+                ? 'Sign in to discover your perfect match' 
                 : 'Join us to find your eternal partner'}
             </Text>
 

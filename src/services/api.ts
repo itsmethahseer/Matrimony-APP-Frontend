@@ -311,4 +311,15 @@ export const api = {
   getSupport: () => apiRequest('GET', '/api/menu/support'),
   
   getPaymentConfig: () => apiRequest<{ merchant_upi_id: string; merchant_name: string }>('GET', '/api/menu/payment-config'),
+
+  // Admin Console
+  getPendingVerifications: () => apiRequest<{ documents: any[]; photos: any[] }>('GET', '/api/admin/pending-verifications'),
+  
+  verifyUserDoc: (userId: number, action: 'approve' | 'reject') => 
+    apiRequest('POST', `/api/admin/verify-id/${userId}`, { action }),
+    
+  verifyUserPhoto: (photoId: number, action: 'approve' | 'reject') => 
+    apiRequest('POST', `/api/admin/verify-photo/${photoId}`, { action }),
+    
+  getAdminUsers: () => apiRequest<any[]>('GET', '/api/admin/users'),
 };
