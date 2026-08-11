@@ -956,22 +956,24 @@ export default function AccountScreen() {
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
 
-          {/* Admin Console Option */}
-          <TouchableOpacity 
-            style={[styles.menuItem, { backgroundColor: '#fffbe6', borderColor: '#ffe58f', borderWidth: 1 }]} 
-            onPress={openAdminConsole}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="shield-checkmark" size={22} color="#d48806" />
-              <View>
-                <Text style={[styles.menuItemText, { color: '#873800', fontWeight: 'bold' }]}>
-                  Admin Console {userData?.is_admin ? '(Admin Account)' : '(Validate Users)'}
-                </Text>
-                <Text style={styles.menuItemSubtext}>Validate user documents & uploaded photos</Text>
+          {/* Admin Console Option (Visible Only For Admin Users) */}
+          {userData?.is_admin && (
+            <TouchableOpacity 
+              style={[styles.menuItem, { backgroundColor: '#fffbe6', borderColor: '#ffe58f', borderWidth: 1 }]} 
+              onPress={openAdminConsole}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="shield-checkmark" size={22} color="#d48806" />
+                <View>
+                  <Text style={[styles.menuItemText, { color: '#873800', fontWeight: 'bold' }]}>
+                    Admin Console
+                  </Text>
+                  <Text style={styles.menuItemSubtext}>Validate user documents & uploaded photos</Text>
+                </View>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#d48806" />
-          </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={20} color="#d48806" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Logout Button */}
