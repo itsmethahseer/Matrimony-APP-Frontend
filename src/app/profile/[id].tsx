@@ -12,6 +12,7 @@ import {
   Modal,
   Dimensions,
   Platform,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -518,6 +519,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   header: {
     flexDirection: 'row',
