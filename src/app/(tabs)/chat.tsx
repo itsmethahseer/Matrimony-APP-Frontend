@@ -118,26 +118,6 @@ export default function ChatScreen() {
         filteredData = data.filter((c: any) => c.last_message.message_type === 'call');
       }
       setConversations(filteredData);
-
-      // Handle automatic chat launch if navigated from Discover button
-      if (autoChatId && !activeChatUser && autoChatProcessedRef.current !== autoChatId) {
-        autoChatProcessedRef.current = autoChatId;
-        const targetConv = data.find((c: any) => c.participant.id === autoChatId);
-        if (targetConv) {
-          openChat(targetConv.participant);
-        } else {
-          // If no existing conversation, load profile details to start a blank chat
-          const profile = await api.getProfileById(autoChatId);
-          openChat({
-            id: profile.user_id,
-            name: profile.name,
-            gender: profile.gender,
-            age: profile.age,
-            photo_url: profile.photos?.[0]?.url,
-            is_online: false
-          });
-        }
-      }
     } catch (error: any) {
       console.error(error);
     } finally {
@@ -145,9 +125,38 @@ export default function ChatScreen() {
     }
   };
 
+  const handleAutoOpenChat = async (targetId: number) => {
+    try {
+      const data = await api.getConversations();
+      const targetConv = data.find((c: any) => c.participant.id === targetId);
+      if (targetConv) {
+        openChat(targetConv.participant);
+      } else {
+        // If no existing conversation, load profile details to start a blank chat
+        const profile = await api.getProfileById(targetId);
+        openChat({
+          id: profile.user_id,
+          name: profile.name,
+          gender: profile.gender,
+          age: profile.age,
+          photo_url: profile.photos?.[0]?.url,
+          is_online: false
+        });
+      }
+    } catch (e) {
+      console.error('Error auto opening chat:', e);
+    }
+  };
+
   useEffect(() => {
     loadConversations();
-  }, [activeFilter, autoChatId]);
+  }, [activeFilter]);
+
+  useEffect(() => {
+    if (autoChatId) {
+      handleAutoOpenChat(autoChatId);
+    }
+  }, [autoChatId]);
 
   // Handle active chat message polling
   useEffect(() => {
@@ -194,7 +203,7 @@ export default function ChatScreen() {
     setActiveChatUser(null);
     setMessages([]);
     setInputText('');
-    router.setParams({ autoChatId: '' });
+    router.setParams({ autoChatId: undefined });
     loadConversations(); // refresh unread badges
   };
 
