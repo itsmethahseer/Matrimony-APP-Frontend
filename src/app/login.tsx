@@ -20,18 +20,11 @@ import { Colors } from '@/constants/theme';
 import { Alert } from '../utils/alert';
 
 export default function LoginScreen() {
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [isLogin, setIsLogin] = useState(true);
   
   // Email state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Phone OTP state
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpNotice, setOtpNotice] = useState<string | null>(null);
 
   // Google Auth state
   const [googleEmailInput, setGoogleEmailInput] = useState('');
@@ -71,7 +64,9 @@ export default function LoginScreen() {
         router.replace('/(tabs)');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+      const errorText = err.message || 'Entered incorrect username or password';
+      setErrorMsg(errorText);
+      Alert.alert('Login Failed', errorText);
     } finally {
       setIsLoading(false);
     }
@@ -91,49 +86,6 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (err: any) {
       setErrorMsg(err.message || 'Google authentication failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Send OTP
-  const handleSendOTP = async () => {
-    if (!phoneNumber || phoneNumber.trim().length < 8) {
-      setErrorMsg('Please enter a valid phone number.');
-      return;
-    }
-    setIsLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await api.sendOTP(phoneNumber.trim());
-      setOtpSent(true);
-      if (res.otp_debug) {
-        setOtpNotice(`✅ OTP Code sent! For testing, use code: ${res.otp_debug}`);
-      } else {
-        setOtpNotice(`✅ OTP Code sent via SMS! Please check your mobile phone.`);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to send OTP.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Verify OTP
-  const handleVerifyOTP = async () => {
-    if (!otpCode || otpCode.trim().length < 4) {
-      setErrorMsg('Please enter the 6-digit OTP code.');
-      return;
-    }
-    setIsLoading(true);
-    setErrorMsg(null);
-
-    try {
-      await api.verifyOTP(phoneNumber.trim(), otpCode.trim());
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'OTP verification failed.');
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +130,6 @@ export default function LoginScreen() {
       setResetCode('');
       setNewPassword('');
       setForgotIdentifier('');
-      setAuthMethod('email');
       setIsLogin(true);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Could not reset password.');
@@ -217,38 +168,6 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* OTP Notice */}
-            {otpNotice && authMethod === 'phone' && (
-              <View style={styles.noticeContainer}>
-                <Text style={styles.noticeText}>{otpNotice}</Text>
-              </View>
-            )}
-
-            {/* Auth Method Selector Tabs */}
-            <View style={styles.methodTabContainer}>
-              <TouchableOpacity
-                style={[styles.methodTab, authMethod === 'email' && styles.activeMethodTab]}
-                onPress={() => {
-                  setAuthMethod('email');
-                  setErrorMsg(null);
-                }}
-              >
-                <Ionicons name="mail" size={16} color={authMethod === 'email' ? '#fff' : Colors.light.textSecondary} />
-                <Text style={[styles.methodTabText, authMethod === 'email' && styles.activeMethodTabText]}>Email</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.methodTab, authMethod === 'phone' && styles.activeMethodTab]}
-                onPress={() => {
-                  setAuthMethod('phone');
-                  setErrorMsg(null);
-                }}
-              >
-                <Ionicons name="call" size={16} color={authMethod === 'phone' ? '#fff' : Colors.light.textSecondary} />
-                <Text style={[styles.methodTabText, authMethod === 'phone' && styles.activeMethodTabText]}>Mobile OTP</Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Google Sign-In Quick Button */}
             <TouchableOpacity
               style={styles.googleBtn}
@@ -264,147 +183,85 @@ export default function LoginScreen() {
 
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with {authMethod === 'email' ? 'email' : 'mobile'}</Text>
+              <Text style={styles.dividerText}>or continue with email</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* 1. Email & Password Form */}
-            {authMethod === 'email' && (
-              <View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email Address</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="email@example.com"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={email}
-                    onChangeText={(text) => {
-                      setEmail(text);
-                      setErrorMsg(null);
-                    }}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={styles.label}>Password</Text>
-                    {isLogin && (
-                      <TouchableOpacity onPress={() => {
-                        setForgotIdentifier(email);
-                        setForgotNotice(null);
-                        setResetCodeSent(false);
-                        setForgotModalVisible(true);
-                      }}>
-                        <Text style={{ fontSize: 12, color: Colors.light.primary, fontWeight: 'bold' }}>Forgot Password?</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="••••••••"
-                    placeholderTextColor="#9ca3af"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    value={password}
-                    onChangeText={(text) => {
-                      setPassword(text);
-                      setErrorMsg(null);
-                    }}
-                  />
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.button} 
-                  onPress={handleEmailSubmit}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>{isLogin ? 'Sign In' : 'Sign Up'}</Text>
-                  )}
-                </TouchableOpacity>
+            {/* Email & Password Form */}
+            <View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email Address</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="email@example.com"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    setErrorMsg(null);
+                  }}
+                />
               </View>
-            )}
 
-            {/* 2. Mobile Number + OTP Form */}
-            {authMethod === 'phone' && (
-              <View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Mobile Number (with Country Code)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="+91 9876543210"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="phone-pad"
-                    value={phoneNumber}
-                    onChangeText={(text) => {
-                      setPhoneNumber(text);
-                      setErrorMsg(null);
-                    }}
-                  />
-                </View>
-
-                {otpSent && (
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>6-Digit Verification OTP</Text>
-                    <TextInput
-                      style={[styles.input, { letterSpacing: 4, fontWeight: 'bold', fontSize: 18, textAlign: 'center' }]}
-                      placeholder="123456"
-                      placeholderTextColor="#9ca3af"
-                      keyboardType="numeric"
-                      maxLength={6}
-                      value={otpCode}
-                      onChangeText={(text) => {
-                        setOtpCode(text);
-                        setErrorMsg(null);
-                      }}
-                    />
-                  </View>
-                )}
-
-                <TouchableOpacity 
-                  style={styles.button} 
-                  onPress={otpSent ? handleVerifyOTP : handleSendOTP}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.buttonText}>{otpSent ? 'Verify OTP & Sign In' : 'Send Verification OTP'}</Text>
-                  )}
-                </TouchableOpacity>
-
-                {otpSent && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    setErrorMsg(null);
+                  }}
+                />
+                {isLogin && (
                   <TouchableOpacity 
-                    style={{ marginTop: 12, alignItems: 'center' }}
-                    onPress={handleSendOTP}
+                    style={{ alignSelf: 'flex-end', marginTop: 8 }}
+                    onPress={() => {
+                      setForgotIdentifier(email);
+                      setForgotNotice(null);
+                      setResetCodeSent(false);
+                      setForgotModalVisible(true);
+                    }}
                   >
-                    <Text style={{ color: Colors.light.primary, fontSize: 13, fontWeight: 'bold' }}>Resend OTP Code</Text>
+                    <Text style={{ fontSize: 13, color: Colors.light.primary, fontWeight: '600' }}>Forgot Password?</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            )}
+
+              <TouchableOpacity 
+                style={styles.button} 
+                onPress={handleEmailSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>{isLogin ? 'Sign In' : 'Sign Up'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
             {/* Toggle Mode Footer */}
-            {authMethod === 'email' && (
-              <View style={styles.switchModeContainer}>
-                <Text style={styles.switchModeText}>
-                  {isLogin ? "Don't have an account? " : 'Already have an account? '}
+            <View style={styles.switchModeContainer}>
+              <Text style={styles.switchModeText}>
+                {isLogin ? "Don't have an account? " : 'Already have an account? '}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setIsLogin(!isLogin);
+                setErrorMsg(null);
+                setPassword('');
+              }}>
+                <Text style={styles.switchModeLink}>
+                  {isLogin ? 'Sign Up Now' : 'Sign In'}
                 </Text>
-                <TouchableOpacity onPress={() => {
-                  setIsLogin(!isLogin);
-                  setErrorMsg(null);
-                  setPassword('');
-                }}>
-                  <Text style={styles.switchModeLink}>
-                    {isLogin ? 'Sign Up Now' : 'Sign In'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              </TouchableOpacity>
+            </View>
 
           </View>
           

@@ -54,6 +54,12 @@ export default function AccountScreen() {
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [supportModalVisible, setSupportModalVisible] = useState(false);
   const [payModalVisible, setPayModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  
+  // Settings toggle states
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [matchAlerts, setMatchAlerts] = useState(true);
+  const [privacyMode, setPrivacyMode] = useState(false);
   
   // Support data state
   const [supportData, setSupportData] = useState<any>(null);
@@ -967,6 +973,17 @@ export default function AccountScreen() {
             <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={() => setSettingsModalVisible(true)}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="settings-outline" size={22} color={Colors.light.primary} />
+              <View>
+                <Text style={styles.menuItemText}>Settings & Privacy</Text>
+                <Text style={styles.menuItemSubtext}>Notifications, privacy preferences & session controls</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+          </TouchableOpacity>
+
           {/* Admin Console Option (Visible Only For Admin Users) */}
           {userData?.is_admin && (
             <TouchableOpacity 
@@ -986,12 +1003,6 @@ export default function AccountScreen() {
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color={Colors.light.error} />
-          <Text style={styles.logoutButtonText}>Log Out</Text>
-        </TouchableOpacity>
 
       </ScrollView>
 
@@ -2439,6 +2450,115 @@ export default function AccountScreen() {
                 )}
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Settings & Privacy */}
+      <Modal visible={settingsModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="settings" size={22} color={Colors.light.primary} />
+                <Text style={styles.sheetTitle}>Settings & Privacy</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSettingsModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+              {/* Account Info Section */}
+              <Text style={styles.faqHeader}>ACCOUNT INFORMATION</Text>
+              <View style={{ backgroundColor: '#f8fafc', padding: 14, borderRadius: 12, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 13, color: Colors.light.textSecondary }}>Signed-in Email:</Text>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: Colors.light.text }}>{userData?.email || 'N/A'}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 13, color: Colors.light.textSecondary }}>Membership Plan:</Text>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: Colors.light.primary }}>{userData?.plan_type || 'Free Tier'}</Text>
+                </View>
+              </View>
+
+              {/* Notifications & Preferences */}
+              <Text style={styles.faqHeader}>NOTIFICATIONS & ALERTS</Text>
+              <View style={{ backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 16 }}>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}
+                  onPress={() => setPushNotifications(!pushNotifications)}
+                >
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.light.text }}>Push Notifications</Text>
+                    <Text style={{ fontSize: 11, color: Colors.light.textSecondary, marginTop: 2 }}>Instant updates for new matches and messages</Text>
+                  </View>
+                  <Ionicons 
+                    name={pushNotifications ? "checkbox" : "square-outline"} 
+                    size={22} 
+                    color={pushNotifications ? Colors.light.primary : "#9ca3af"} 
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 }}
+                  onPress={() => setMatchAlerts(!matchAlerts)}
+                >
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.light.text }}>Match Activity Digest</Text>
+                    <Text style={{ fontSize: 11, color: Colors.light.textSecondary, marginTop: 2 }}>Daily recommendations and profile view alerts</Text>
+                  </View>
+                  <Ionicons 
+                    name={matchAlerts ? "checkbox" : "square-outline"} 
+                    size={22} 
+                    color={matchAlerts ? Colors.light.primary : "#9ca3af"} 
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Privacy Controls */}
+              <Text style={styles.faqHeader}>PRIVACY & VISIBILITY</Text>
+              <View style={{ backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 20 }}>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 }}
+                  onPress={() => setPrivacyMode(!privacyMode)}
+                >
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.light.text }}>Member Only Privacy Mode</Text>
+                    <Text style={{ fontSize: 11, color: Colors.light.textSecondary, marginTop: 2 }}>Only show my profile to registered & verified members</Text>
+                  </View>
+                  <Ionicons 
+                    name={privacyMode ? "checkbox" : "square-outline"} 
+                    size={22} 
+                    color={privacyMode ? Colors.light.primary : "#9ca3af"} 
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Session Control / Log Out */}
+              <Text style={styles.faqHeader}>SESSION CONTROLS</Text>
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 14,
+                  marginBottom: 30,
+                  backgroundColor: '#fff1f2',
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#fecdd3',
+                }}
+                onPress={() => {
+                  setSettingsModalVisible(false);
+                  handleLogout();
+                }}
+              >
+                <Ionicons name="log-out-outline" size={20} color="#e11d48" />
+                <Text style={{ color: '#e11d48', fontWeight: 'bold', fontSize: 14 }}>Log Out of Session</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
