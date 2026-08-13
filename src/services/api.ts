@@ -123,7 +123,8 @@ async function apiRequest<T = any>(
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    const isAuthPath = path.includes('/auth/login') || path.includes('/auth/register') || path.includes('/auth/google-auth') || path.includes('/auth/send-otp') || path.includes('/auth/verify-otp');
+    if (response.status === 401 && !isAuthPath) {
       await removeToken();
       notifyUnauthorized();
     }
