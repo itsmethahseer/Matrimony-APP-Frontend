@@ -34,11 +34,12 @@ export default function RootLayout() {
           setIsAuthenticated(isAuth);
           setIsLoading(false);
 
-          const inAuthGroup = segments[0] === 'login';
+          const currentSegment = segments[0];
+          const isLoginPage = !currentSegment || currentSegment === 'login';
 
-          if (!isAuth && !inAuthGroup) {
+          if (!isAuth && !isLoginPage) {
             router.replace('/login');
-          } else if (isAuth && inAuthGroup) {
+          } else if (isAuth && isLoginPage) {
             router.replace('/(tabs)');
           }
         }
@@ -46,7 +47,10 @@ export default function RootLayout() {
         if (isMounted) {
           setIsAuthenticated(false);
           setIsLoading(false);
-          router.replace('/login');
+          const currentSegment = segments[0];
+          if (currentSegment && currentSegment !== 'login') {
+            router.replace('/login');
+          }
         }
       }
     };
@@ -61,10 +65,13 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = onUnauthorized(() => {
       setIsAuthenticated(false);
-      router.replace('/login');
+      const currentSegment = segments[0];
+      if (currentSegment && currentSegment !== 'login') {
+        router.replace('/login');
+      }
     });
     return unsubscribe;
-  }, []);
+  }, [segments]);
 
   // Register Alert Listener for custom modals on Web
   useEffect(() => {

@@ -45,9 +45,14 @@ export default function LoginScreen() {
   const router = useRouter();
 
   // Handle Email + Password submit
-  const handleEmailSubmit = async () => {
+  const handleEmailSubmit = async (e?: any) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
+      const missingMsg = 'Please enter both email and password.';
+      setErrorMsg(missingMsg);
+      Alert.alert('Required', missingMsg);
       return;
     }
     
