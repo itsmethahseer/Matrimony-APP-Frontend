@@ -86,6 +86,29 @@ export default function InterestsScreen() {
     }
   };
 
+  const handleCancelInterest = async (interestId: number, targetName?: string) => {
+    Alert.alert(
+      'Withdraw Interest?',
+      `Are you sure you want to cancel your interest request${targetName ? ` to ${targetName}` : ''}? Your credits will be refunded.`,
+      [
+        { text: 'Keep Interest', style: 'cancel' },
+        {
+          text: 'Yes, Withdraw',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await api.cancelInterest(interestId);
+              Alert.alert('Interest Withdrawn', res?.message || 'Your interest request has been cancelled and credits refunded.');
+              setInterests((prev) => prev.filter((item) => item.id !== interestId));
+            } catch (error: any) {
+              Alert.alert('Unable to Cancel', error.message || 'Could not cancel interest request.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderInterestItem = ({ item }: { item: Interest }) => {
     // Determine which profile is the other person
     const otherProfile = activeTab === 'received' ? item.sender_profile : item.receiver_profile;
@@ -103,8 +126,8 @@ export default function InterestsScreen() {
           <Image source={{ uri: mainPhoto }} style={styles.avatar} />
           <View style={styles.textDetails}>
             <Text style={styles.name}>{otherProfile.name}, {otherProfile.age}</Text>
-            <Text style={styles.subtitle}>{otherProfile.profession}</Text>
-            <Text style={styles.location}>{otherProfile.present_location}</Text>
+            <Text style={styles.subtitle}>{otherProfile.profession || 'Profession Not Disclosed'}</Text>
+            <Text style={styles.location}>📍 {otherProfile.present_location || 'India'}</Text>
           </View>
         </TouchableOpacity>
 
@@ -132,11 +155,42 @@ export default function InterestsScreen() {
             </View>
           )
         ) : (
-          <View style={styles.statusContainer}>
-            <Text style={styles.sentStatusLabel}>
-              Status: <Text style={[styles.sentStatusText, item.status === 'Accepted' && styles.statusAccepted]}>{item.status}</Text>
-            </Text>
-          </View>
+          item.status === 'Pending' ? (
+            <View style={styles.sentActionRow}>
+              <View style={styles.pendingBadgeContainer}>
+                <View style={styles.pendingDot} />
+                <Text style={styles.pendingBadgeText}>Pending Response</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.cancelInterestBtn}
+                onPress={() => handleCancelInterest(item.id, otherProfile.name)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close-circle-outline" size={16} color={Colors.light.error} />
+                <Text style={styles.cancelInterestText}>Cancel Interest</Text>
+              </TouchableOpacity>
+            </View>
+          ) : item.status === 'Accepted' ? (
+            <View style={styles.sentActionRow}>
+              <View style={styles.acceptedBadgeContainer}>
+                <Ionicons name="checkmark-circle" size={16} color={Colors.light.emerald} />
+                <Text style={styles.acceptedBadgeText}>Connected</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.chatActionBtn}
+                onPress={() => router.push({ pathname: '/chat', params: { autoChatId: item.receiver_id } })}
+              >
+                <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+                <Text style={styles.chatActionText}>Chat</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.statusContainer}>
+              <Text style={[styles.statusText, styles.statusDeclined]}>
+                Interest Declined
+              </Text>
+            </View>
+          )
         )}
       </View>
     );
@@ -329,6 +383,83 @@ const styles = StyleSheet.create({
   sentStatusText: {
     fontWeight: 'bold',
     color: Colors.light.primary,
+  },
+  sentActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(233, 225, 220, 0.3)',
+    paddingTop: 12,
+  },
+  pendingBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+  },
+  pendingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#d97706',
+    marginRight: 6,
+  },
+  pendingBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#b45309',
+  },
+  cancelInterestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    gap: 4,
+  },
+  cancelInterestText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.error,
+  },
+  acceptedBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    gap: 4,
+  },
+  acceptedBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.emerald,
+  },
+  chatActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.light.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    gap: 6,
+  },
+  chatActionText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   centered: {
     flex: 1,

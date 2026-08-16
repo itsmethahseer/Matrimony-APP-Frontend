@@ -245,6 +245,15 @@ export const api = {
   // Explore / Interactions
   sendInterest: (receiverId: number) => 
     apiRequest('POST', '/api/explore/interests', { receiver_id: receiverId }),
+
+  cancelInterest: (interestId: number) => 
+    apiRequest('DELETE', `/api/explore/interests/${interestId}`),
+
+  cancelInterestByUser: (receiverId: number) => 
+    apiRequest('DELETE', `/api/explore/interests/cancel-by-user/${receiverId}`),
+
+  getInterestStatus: (targetUserId: number) => 
+    apiRequest<{ sent: { id: number; status: string; created_at: string } | null; received: { id: number; status: string; created_at: string } | null }>('GET', `/api/explore/interests/status/${targetUserId}`),
     
   getReceivedInterests: () => apiRequest('GET', '/api/explore/interests/received'),
   

@@ -77,6 +77,16 @@ export default function ProfileDetailsScreen() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Interest Status & 5-Second Countdown State
+  const [interestStatus, setInterestStatus] = useState<{
+    sent: { id: number; status: string; created_at?: string } | null;
+    received: { id: number; status: string; created_at?: string } | null;
+  } | null>(null);
+  const [isSendingInterest, setIsSendingInterest] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(5);
+  const countdownTimerRef = useRef<any>(null);
+  const [isInterestLoading, setIsInterestLoading] = useState(false);
+
   const noteTimeoutRef = useRef<any>(null);
 
   const loadProfileDetails = async () => {
@@ -108,7 +118,15 @@ export default function ProfileDetailsScreen() {
       setCreditsRemaining(menu.credits ?? 0);
       setCurrentUserId(menu.user_id);
 
-      // 5. Handle self-preview or already unlocked checks
+      // 5. Fetch interest status between current user and profile user
+      try {
+        const statusData = await api.getInterestStatus(data.user_id);
+        setInterestStatus(statusData);
+      } catch (e) {
+        console.error('Could not check interest status', e);
+      }
+
+      // 6. Handle self-preview or already unlocked checks
       if (data.user_id === menu.user_id) {
         setIsContactUnlocked(true);
       } else {
@@ -140,6 +158,18 @@ export default function ProfileDetailsScreen() {
       loadProfileDetails();
     }
   }, [profileId]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+      if (noteTimeoutRef.current) {
+        clearTimeout(noteTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle Note Auto-save simulation
   const handleNoteChange = (text: string) => {
@@ -176,13 +206,101 @@ export default function ProfileDetailsScreen() {
     }
   };
 
-  const handleExpressInterest = async () => {
+  // 5-Second Countdown Interest Handlers
+  const handleStartExpressInterest = () => {
     if (!profile) return;
+    if (isSendingInterest) return;
+
+    setCountdownSeconds(5);
+    setIsSendingInterest(true);
+
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+    }
+
+    let remaining = 5;
+    countdownTimerRef.current = setInterval(async () => {
+      remaining -= 1;
+      if (remaining > 0) {
+        setCountdownSeconds(remaining);
+      } else {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+        setIsSendingInterest(false);
+        await performSendInterest();
+      }
+    }, 1000);
+  };
+
+  const handleCancelCountdown = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setIsSendingInterest(false);
+    setCountdownSeconds(5);
+    Alert.alert('Sending Stopped', 'Interest request was cancelled before sending.');
+  };
+
+  const performSendInterest = async () => {
+    if (!profile) return;
+    setIsInterestLoading(true);
     try {
-      await api.sendInterest(profile.user_id);
-      Alert.alert('Interest Expressed', 'Your request has been sent successfully!');
+      const res = await api.sendInterest(profile.user_id);
+      setInterestStatus((prev) => ({
+        ...prev,
+        sent: { id: res.id, status: res.status, created_at: res.created_at },
+        received: prev?.received || null,
+      }));
+      Alert.alert('Interest Sent!', 'Your connection request has been sent successfully!');
     } catch (error: any) {
       Alert.alert('Unable to Connect', error.message || 'Interest could not be sent.');
+    } finally {
+      setIsInterestLoading(false);
+    }
+  };
+
+  const handleCancelSentInterest = async () => {
+    if (!profile || !interestStatus?.sent) return;
+    const interestId = interestStatus.sent.id;
+
+    Alert.alert(
+      'Withdraw Interest?',
+      `Are you sure you want to cancel your interest request to ${profile.name}? Your credits will be refunded.`,
+      [
+        { text: 'Keep Interest', style: 'cancel' },
+        {
+          text: 'Yes, Withdraw',
+          style: 'destructive',
+          onPress: async () => {
+            setIsInterestLoading(true);
+            try {
+              const res = await api.cancelInterest(interestId);
+              setInterestStatus((prev) => ({ ...prev, sent: null, received: prev?.received || null }));
+              Alert.alert('Interest Withdrawn', res?.message || 'Your interest request has been cancelled and credits refunded.');
+            } catch (error: any) {
+              Alert.alert('Unable to Cancel', error.message || 'Could not cancel interest request.');
+            } finally {
+              setIsInterestLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRespondToReceivedInterest = async (status: 'Accepted' | 'Declined') => {
+    if (!interestStatus?.received) return;
+    try {
+      await api.respondToInterest(interestStatus.received.id, status);
+      setInterestStatus((prev) => ({
+        ...prev,
+        sent: prev?.sent || null,
+        received: status === 'Declined' ? null : { ...prev!.received!, status },
+      }));
+      Alert.alert('Request Updated', `Interest request ${status.toLowerCase()}!`);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Could not update request.');
     }
   };
 
@@ -448,10 +566,72 @@ export default function ProfileDetailsScreen() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.floatingExpressBtn} onPress={handleExpressInterest}>
-            <Ionicons name="heart" size={20} color="#fff" />
-            <Text style={styles.expressBtnText}>Express Interest</Text>
-          </TouchableOpacity>
+          {isSendingInterest ? (
+            <TouchableOpacity 
+              style={[styles.floatingExpressBtn, styles.countdownActiveBtn]} 
+              onPress={handleCancelCountdown}
+              activeOpacity={0.85}
+            >
+              <View style={styles.countdownBadge}>
+                <Text style={styles.countdownNumber}>{countdownSeconds}s</Text>
+              </View>
+              <Text style={styles.countdownText}>Sending... Tap to Stop</Text>
+              <Ionicons name="close-circle" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : interestStatus?.sent?.status === 'Pending' ? (
+            <View style={styles.pendingActionContainer}>
+              <View style={styles.pendingStatusBadge}>
+                <View style={styles.pendingDot} />
+                <Text style={styles.pendingStatusText}>Sent (Pending)</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.cancelSentBtn} 
+                onPress={handleCancelSentInterest}
+                disabled={isInterestLoading}
+              >
+                <Ionicons name="close-circle-outline" size={16} color={Colors.light.error} />
+                <Text style={styles.cancelSentText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : interestStatus?.sent?.status === 'Accepted' || interestStatus?.received?.status === 'Accepted' ? (
+            <TouchableOpacity 
+              style={[styles.floatingExpressBtn, styles.connectedBtn]} 
+              onPress={() => router.push({ pathname: '/chat', params: { autoChatId: profile.user_id } })}
+            >
+              <Ionicons name="chatbubbles" size={20} color="#fff" />
+              <Text style={styles.expressBtnText}>Connected • Chat</Text>
+            </TouchableOpacity>
+          ) : interestStatus?.received?.status === 'Pending' ? (
+            <View style={styles.receivedActionGroup}>
+              <TouchableOpacity 
+                style={styles.receivedDeclineBtn}
+                onPress={() => handleRespondToReceivedInterest('Declined')}
+              >
+                <Text style={styles.receivedDeclineText}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.receivedAcceptBtn}
+                onPress={() => handleRespondToReceivedInterest('Accepted')}
+              >
+                <Text style={styles.receivedAcceptText}>Accept</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.floatingExpressBtn} 
+              onPress={handleStartExpressInterest}
+              disabled={isInterestLoading}
+            >
+              {isInterestLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="heart" size={20} color="#fff" />
+                  <Text style={styles.expressBtnText}>Express Interest</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {!isContactUnlocked ? (
             <TouchableOpacity 
@@ -825,6 +1005,110 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 2,
+  },
+  countdownActiveBtn: {
+    backgroundColor: '#b45309',
+    shadowColor: '#b45309',
+  },
+  countdownBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  countdownNumber: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  countdownText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  pendingActionContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 8,
+    gap: 8,
+  },
+  pendingStatusBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+  },
+  pendingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#d97706',
+    marginRight: 6,
+  },
+  pendingStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#b45309',
+  },
+  cancelSentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    gap: 4,
+  },
+  cancelSentText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Colors.light.error,
+  },
+  connectedBtn: {
+    backgroundColor: Colors.light.emerald,
+    shadowColor: Colors.light.emerald,
+  },
+  receivedActionGroup: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 8,
+  },
+  receivedDeclineBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(233, 225, 220, 0.4)',
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  receivedDeclineText: {
+    color: Colors.light.onSurfaceVariant,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  receivedAcceptBtn: {
+    flex: 2,
+    backgroundColor: Colors.light.primary,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  receivedAcceptText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   expressBtnText: {
     color: '#fff',

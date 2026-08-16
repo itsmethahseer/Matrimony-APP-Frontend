@@ -23,6 +23,15 @@ A universal React Native (Expo) mobile & web application for **HelpMeet** - a pr
    - Android & iOS status bar top inset spacing (`paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0`).
    - High-contrast dark status bar icons ensure battery percentage, charging state, Wi-Fi, cellular range, and time remain perfectly visible.
 
+5. **⏱️ 5-Second Countdown Timer & Undo Before Sending**:
+   - Tapping Express Interest on feed cards or full profile view activates a live 5-second countdown timer (`⏱️ 5s → 1s`).
+   - Users can tap to cancel/stop at any time during the 5 seconds to prevent accidental sends without touching their credit balance.
+
+6. **↩️ Cancel / Withdraw Pending Sent Interests (with Auto Credit Refund)**:
+   - Sent interests with status `Pending` feature a **Cancel Interest** action in both the Sent Interests tab and Profile view.
+   - Cancelling a pending interest immediately removes the request and refunds the spent action credits back to the user balance.
+   - Once an interest is `Accepted` or `Declined`, withdrawal is safely disabled and direct connection/chat options are shown.
+
 ---
 
 ## 💳 Subscriptions & Dynamic Quota System

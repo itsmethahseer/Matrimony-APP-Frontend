@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -59,9 +59,21 @@ interface ProfileCardProps {
   onPass: (profileId: number, userId: number) => void;
   onChat: (userId: number) => void;
   onLike: (profileId: number, userId: number) => void;
+  countdownSeconds?: number;
+  isCountingDown?: boolean;
+  onCancelCountdown?: (profileId: number) => void;
 }
 
-const ProfileCardItem = ({ item, onPreview, onPass, onChat, onLike }: ProfileCardProps) => {
+const ProfileCardItem = ({ 
+  item, 
+  onPreview, 
+  onPass, 
+  onChat, 
+  onLike,
+  countdownSeconds,
+  isCountingDown,
+  onCancelCountdown
+}: ProfileCardProps) => {
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const userPhotos = (item.photos && item.photos.length > 0)
     ? item.photos
@@ -175,12 +187,23 @@ const ProfileCardItem = ({ item, onPreview, onPass, onChat, onLike }: ProfileCar
           >
             <Ionicons name="chatbubble" size={20} color={Colors.light.primary} />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionButtonCircle, styles.likeBtn]}
-            onPress={() => onLike(item.id, item.user_id)}
-          >
-            <Ionicons name="heart" size={22} color="#fff" />
-          </TouchableOpacity>
+          {isCountingDown ? (
+            <TouchableOpacity 
+              style={[styles.actionButtonCircle, styles.countdownCardBtn]}
+              onPress={() => onCancelCountdown && onCancelCountdown(item.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.countdownCardNumber}>{countdownSeconds}s</Text>
+              <Ionicons name="close" size={14} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.actionButtonCircle, styles.likeBtn]}
+              onPress={() => onLike(item.id, item.user_id)}
+            >
+              <Ionicons name="heart" size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -266,6 +289,10 @@ export default function DiscoverScreen() {
     }
   };
 
+  // 5-Second Countdown State for Cards
+  const [activeTimers, setActiveTimers] = useState<{ [profileId: number]: number }>({});
+  const timerRefs = useRef<{ [profileId: number]: any }>({});
+
   const loadProfiles = async (category: string) => {
     setIsLoading(true);
     try {
@@ -282,10 +309,60 @@ export default function DiscoverScreen() {
     loadProfiles(selectedCategory);
   }, [selectedCategory]);
 
-  const handleLike = async (profileId: number, receiverId: number) => {
+  // Clean up timers on unmount or category change
+  useEffect(() => {
+    return () => {
+      Object.values(timerRefs.current).forEach((interval) => clearInterval(interval as any));
+      timerRefs.current = {};
+    };
+  }, [selectedCategory]);
+
+  const handleLike = (profileId: number, receiverId: number) => {
+    // If already counting down, tapping again cancels it
+    if (timerRefs.current[profileId]) {
+      handleCancelLikeCountdown(profileId);
+      return;
+    }
+
+    setActiveTimers((prev) => ({ ...prev, [profileId]: 5 }));
+
+    let count = 5;
+    const interval = setInterval(async () => {
+      count -= 1;
+      if (count > 0) {
+        setActiveTimers((prev) => ({ ...prev, [profileId]: count }));
+      } else {
+        clearInterval(timerRefs.current[profileId]);
+        delete timerRefs.current[profileId];
+        setActiveTimers((prev) => {
+          const next = { ...prev };
+          delete next[profileId];
+          return next;
+        });
+        await executeSendInterest(profileId, receiverId);
+      }
+    }, 1000);
+
+    timerRefs.current[profileId] = interval;
+  };
+
+  const handleCancelLikeCountdown = (profileId: number) => {
+    if (timerRefs.current[profileId]) {
+      clearInterval(timerRefs.current[profileId]);
+      delete timerRefs.current[profileId];
+    }
+    setActiveTimers((prev) => {
+      const next = { ...prev };
+      delete next[profileId];
+      return next;
+    });
+    Alert.alert('Sending Cancelled', 'Interest request was stopped before sending.');
+  };
+
+  const executeSendInterest = async (profileId: number, receiverId: number) => {
     try {
       await api.sendInterest(receiverId);
-      Alert.alert('Interest Sent', 'Successfully expressed interest in this profile!');
+      Alert.alert('Interest Sent!', 'Successfully expressed interest in this profile!');
       // Remove liked profile from list dynamically
       setProfiles((prev) => prev.filter((p) => p.id !== profileId));
     } catch (error: any) {
@@ -318,6 +395,9 @@ export default function DiscoverScreen() {
         onPass={handlePass}
         onChat={handleChat}
         onLike={handleLike}
+        countdownSeconds={activeTimers[item.id]}
+        isCountingDown={!!activeTimers[item.id]}
+        onCancelCountdown={handleCancelLikeCountdown}
       />
     );
   };
@@ -806,6 +886,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 5,
     elevation: 3,
+  },
+  countdownCardBtn: {
+    backgroundColor: '#b45309',
+    borderColor: '#fde68a',
+    borderWidth: 1.5,
+    width: 62,
+    height: 52,
+    borderRadius: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    shadowColor: '#b45309',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  countdownCardNumber: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   centered: {
     flex: 1,
