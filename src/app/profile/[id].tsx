@@ -72,6 +72,8 @@ export default function ProfileDetailsScreen() {
   // Contact unlocked state
   const [isContactUnlocked, setIsContactUnlocked] = useState(false);
   const [creditsRemaining, setCreditsRemaining] = useState(0);
+  const [isPlanActive, setIsPlanActive] = useState(true);
+  const [isPlanExpired, setIsPlanExpired] = useState(false);
   const [isCreditModalVisible, setIsCreditModalVisible] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -109,21 +111,35 @@ export default function ProfileDetailsScreen() {
       }
 
       // 3. Check if favourited
-      const favs = await api.getFavourites();
-      const favourited = favs.some((fav: any) => fav.id === data.id);
-      setIsFavourite(favourited);
+      try {
+        const favs = await api.getFavourites();
+        const favourited = Array.isArray(favs) && favs.some((fav: any) => 
+          (fav.favourited_id !== undefined && Number(fav.favourited_id) === Number(data.user_id)) ||
+          (fav.favourited_profile?.id !== undefined && Number(fav.favourited_profile.id) === Number(data.id))
+        );
+        setIsFavourite(favourited);
+      } catch (e) {
+        console.warn('Could not check favourites', e);
+      }
 
-      // 4. Fetch menu summary to see credit balance
+      // 4. Fetch menu summary to see credit balance and plan status
       const menu = await api.getMenuSummary();
       setCreditsRemaining(menu.credits ?? 0);
       setCurrentUserId(menu.user_id);
+      setIsPlanActive(menu.is_plan_active ?? (menu.membership_status === 'Premium' || menu.membership_status === 'Admin'));
+      setIsPlanExpired(menu.is_expired ?? (menu.membership_status === 'Expired'));
 
-      // 5. Fetch interest status between current user and profile user
-      try {
-        const statusData = await api.getInterestStatus(data.user_id);
-        setInterestStatus(statusData);
-      } catch (e) {
-        console.error('Could not check interest status', e);
+      // 5. Fetch interest status between current user and profile user (skip if viewing own profile)
+      if (data.user_id && menu.user_id && Number(data.user_id) !== Number(menu.user_id)) {
+        try {
+          const statusData = await api.getInterestStatus(data.user_id);
+          setInterestStatus(statusData);
+        } catch (e) {
+          console.warn('Could not check interest status:', e);
+          setInterestStatus(null);
+        }
+      } else {
+        setInterestStatus(null);
       }
 
       // 6. Handle self-preview or already unlocked checks
@@ -134,7 +150,7 @@ export default function ProfileDetailsScreen() {
           const viewed = await api.getViewedContacts();
           console.log('[Unlock Check] Viewed list:', viewed.map((v: any) => ({ viewed_id: v.viewed_id, profile_id: v.viewed_profile?.id })));
           console.log('[Unlock Check] Current Profile user_id:', data.user_id, 'profile_id:', data.id);
-          const alreadyViewed = viewed.some((cv: any) => 
+          const alreadyViewed = Array.isArray(viewed) && viewed.some((cv: any) => 
             (cv.viewed_id !== undefined && Number(cv.viewed_id) === Number(data.user_id)) ||
             (cv.viewed_profile?.id !== undefined && Number(cv.viewed_profile.id) === Number(data.id))
           );
@@ -143,7 +159,7 @@ export default function ProfileDetailsScreen() {
             setIsContactUnlocked(true);
           }
         } catch (e) {
-          console.error('Could not check viewed contacts', e);
+          console.warn('Could not check viewed contacts', e);
         }
       }
     } catch (error: any) {
@@ -311,7 +327,16 @@ export default function ProfileDetailsScreen() {
       await api.viewContact(profile.user_id);
       setIsContactUnlocked(true);
       setIsCreditModalVisible(false);
-      await loadProfileDetails();
+      // Reload profile to populate unmasked contact information (numbers, address, etc.)
+      const updatedProfile = await api.getProfileById(profileId);
+      setProfile(updatedProfile);
+      // Refresh user credits
+      try {
+        const menu = await api.getMenuSummary();
+        setCreditsRemaining(menu.credits ?? 0);
+      } catch (e) {
+        // silent
+      }
       Alert.alert('Success', 'Contact details unlocked successfully!');
     } catch (error: any) {
       Alert.alert('Unlock Failed', error.message || 'Insufficient credits or request failed.');
@@ -662,30 +687,53 @@ export default function ProfileDetailsScreen() {
 
             <View style={styles.alertBody}>
               <View style={styles.coinIconWrapper}>
-                <Ionicons name="key" size={36} color={Colors.light.secondary} />
+                <Ionicons name={!isPlanActive ? "lock-closed" : "key"} size={36} color={!isPlanActive ? Colors.light.primary : Colors.light.secondary} />
               </View>
 
-              <Text style={styles.alertText}>
-                Unlocking contact details requires <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>5 Credits</Text>. You will be charged directly from your subscription balance.
-              </Text>
+              {!isPlanActive ? (
+                <>
+                  <Text style={styles.alertText}>
+                    {isPlanExpired 
+                      ? "Your membership plan has expired. Your remaining credits and contact views are safely preserved, but an active plan is required to unlock contact details." 
+                      : "Contact views are not available on the Free tier. Upgrade to a Silver, Gold, or Platinum plan to unlock verified phone numbers and contact details."}
+                  </Text>
+                  <TouchableOpacity 
+                    style={[styles.unlockSubmitBtn, { backgroundColor: Colors.light.primary }]}
+                    onPress={() => {
+                      setIsCreditModalVisible(false);
+                      router.push('/(tabs)/account');
+                    }}
+                  >
+                    <Text style={styles.unlockSubmitBtnText}>
+                      {isPlanExpired ? "Recharge / Extend Plan" : "Upgrade to Paid Plan"}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.alertText}>
+                    Unlocking contact details requires <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>5 Credits</Text>. You will be charged directly from your subscription balance.
+                  </Text>
 
-              <Text style={{ textAlign: 'center', fontSize: 13, color: Colors.light.textSecondary, marginBottom: 4 }}>
-                Current Balance: <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>{creditsRemaining === 9999 ? 'Unlimited' : `${creditsRemaining} Credits`}</Text>
-              </Text>
+                  <Text style={{ textAlign: 'center', fontSize: 13, color: Colors.light.textSecondary, marginBottom: 4 }}>
+                    Current Balance: <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>{creditsRemaining === 9999 ? 'Unlimited' : `${creditsRemaining} Credits`}</Text>
+                  </Text>
 
-              <TouchableOpacity 
-                style={styles.unlockSubmitBtn}
-                onPress={handleUnlockContact}
-                disabled={isUnlocking}
-              >
-                {isUnlocking ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.unlockSubmitBtnText}>Confirm & Unlock</Text>
-                )}
-              </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.unlockSubmitBtn}
+                    onPress={handleUnlockContact}
+                    disabled={isUnlocking}
+                  >
+                    {isUnlocking ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.unlockSubmitBtnText}>Confirm & Unlock</Text>
+                    )}
+                  </TouchableOpacity>
 
-              <Text style={styles.alertNotice}>YOUR DETAILS WILL ALSO BE SHARED WITH {profile.name.toUpperCase()}</Text>
+                  <Text style={styles.alertNotice}>YOUR DETAILS WILL ALSO BE SHARED WITH {profile.name.toUpperCase()}</Text>
+                </>
+              )}
             </View>
           </View>
         </View>

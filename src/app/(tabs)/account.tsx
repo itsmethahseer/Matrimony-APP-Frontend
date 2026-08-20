@@ -42,6 +42,7 @@ interface MenuSummary {
   credits: number;
   plan_validity: string | null;
   is_expired: boolean;
+  is_plan_active?: boolean;
 }
 
 export default function AccountScreen() {
@@ -844,10 +845,18 @@ export default function AccountScreen() {
             <View>
               <Text style={styles.membershipTierLabel}>CURRENT TIER</Text>
               <Text style={styles.membershipTierName}>
-                {userData?.is_admin ? 'Administrator' : (summary.plan_type ? `${summary.plan_type} Member` : 'Free Account')}
+                {userData?.is_admin 
+                  ? 'Administrator' 
+                  : (summary.is_expired 
+                    ? `${summary.plan_type || 'Plan'} (Expired)` 
+                    : (summary.plan_type ? `${summary.plan_type} Member` : 'Free Account'))}
               </Text>
             </View>
-            <Ionicons name={userData?.is_admin ? "shield-checkmark" : "ribbon-sharp"} size={32} color={userData?.is_admin ? Colors.light.primary : Colors.light.secondaryContainer} />
+            <Ionicons 
+              name={userData?.is_admin ? "shield-checkmark" : (summary.is_expired ? "alert-circle" : "ribbon-sharp")} 
+              size={32} 
+              color={userData?.is_admin ? Colors.light.primary : (summary.is_expired ? '#e53e3e' : Colors.light.secondaryContainer)} 
+            />
           </View>
 
           <View style={styles.quotaGrid}>
@@ -871,20 +880,32 @@ export default function AccountScreen() {
             </View>
           </View>
 
+          {summary.is_expired && (
+            <View style={{ backgroundColor: '#fff5f5', borderWidth: 1, borderColor: '#feb2b2', padding: 8, borderRadius: 8, marginTop: 10, marginHorizontal: 16 }}>
+              <Text style={{ color: '#c53030', fontSize: 12, textAlign: 'center', fontWeight: '600' }}>
+                🔒 Your plan has expired. Your remaining credits and quotas are safely preserved. Recharge now to extend validity and unlock them!
+              </Text>
+            </View>
+          )}
+
           <View style={styles.membershipFooter}>
             <Text style={styles.validityText}>
               {userData?.is_admin 
                 ? '★ Unlimited Admin Access'
                 : (summary.plan_validity 
-                  ? `Valid until: ${new Date(summary.plan_validity).toLocaleDateString()}` 
-                  : 'Subscribe to view profiles')}
+                  ? (summary.is_expired 
+                    ? `Expired on: ${new Date(summary.plan_validity).toLocaleDateString()}` 
+                    : `Valid until: ${new Date(summary.plan_validity).toLocaleDateString()}`)
+                  : 'Upgrade to unlock calls & contact views')}
             </Text>
             {!userData?.is_admin && (
               <TouchableOpacity 
-                style={styles.upgradeBtn}
+                style={[styles.upgradeBtn, summary.is_expired && { backgroundColor: '#e53e3e' }]}
                 onPress={() => setSubModalVisible(true)}
               >
-                <Text style={styles.upgradeBtnText}>Upgrade</Text>
+                <Text style={styles.upgradeBtnText}>
+                  {summary.is_expired ? 'Recharge' : (summary.plan_type ? 'Extend' : 'Upgrade')}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1026,7 +1047,8 @@ export default function AccountScreen() {
                   <Text style={styles.planTitle}>Silver Plan</Text>
                   <Text style={styles.planPrice}>₹299 / mo</Text>
                 </View>
-                 <Text style={styles.planDesc}>• 100 Contact Credits • 200 Messages • 60 Mins Calls • Validity: 30 days</Text>
+                <Text style={styles.planDesc}>• 20 Contact Views • 200 Messages • 60 Mins Calls • 100 Credits • Validity: 30 days (1 Month)</Text>
+                <Text style={[styles.planDesc, { color: Colors.light.primary, fontWeight: '600', marginTop: 4 }]}>✓ Unused credits rollover and extend upon recharge</Text>
               </TouchableOpacity>
  
               {/* Plan 2: Gold */}
@@ -1035,7 +1057,8 @@ export default function AccountScreen() {
                   <Text style={[styles.planTitle, { color: '#735c00' }]}>Gold Plan</Text>
                   <Text style={[styles.planPrice, { color: '#735c00' }]}>₹1,299 / 3 mos</Text>
                 </View>
-                <Text style={styles.planDesc}>• 500 Contact Credits • 1000 Messages • 300 Mins Calls • Validity: 90 days</Text>
+                <Text style={styles.planDesc}>• 100 Contact Views • 1000 Messages • 300 Mins Calls • 500 Credits • Validity: 90 days (3 Months)</Text>
+                <Text style={[styles.planDesc, { color: '#735c00', fontWeight: '600', marginTop: 4 }]}>✓ Unused credits rollover and extend upon recharge</Text>
               </TouchableOpacity>
  
               {/* Plan 3: Platinum */}
@@ -1044,7 +1067,8 @@ export default function AccountScreen() {
                   <Text style={[styles.planTitle, { color: '#fff' }]}>Platinum Plan</Text>
                   <Text style={[styles.planPrice, { color: '#fff' }]}>₹2,499 / 6 mos</Text>
                 </View>
-                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Credits • Unlimited Messages • 1000 Mins Calls • Validity: 180 days</Text>
+                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Views & Credits • Unlimited Messages • 1000 Mins Calls • Validity: 180 days (6 Months)</Text>
+                <Text style={[styles.planDesc, { color: '#fff', fontWeight: '600', marginTop: 4 }]}>✓ Unused credits rollover and extend upon recharge</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

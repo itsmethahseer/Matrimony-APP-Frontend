@@ -219,7 +219,18 @@ export default function ChatScreen() {
       // Scroll to bottom
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (error: any) {
-      Alert.alert('Quota Expired', error.message || 'Could not send message.');
+      Alert.alert('Message Failed', error.message || 'Could not send message.');
+    }
+  };
+
+  const handleCall = async () => {
+    if (!activeChatUser) return;
+    try {
+      const callMsg = await api.sendMessage(activeChatUser.id, 'Voice Call Log', 'call', 60);
+      setMessages((prev) => [...prev, callMsg]);
+      Alert.alert('Call Connected', `Voice call simulated with ${activeChatUser.name}.`);
+    } catch (error: any) {
+      Alert.alert('Calling Unavailable', error.message || 'Calling is only available on an active paid membership plan.');
     }
   };
 
@@ -358,7 +369,7 @@ export default function ChatScreen() {
                   </Text>
                 </View>
                 
-                <TouchableOpacity style={styles.chatCallBtn}>
+                <TouchableOpacity style={styles.chatCallBtn} onPress={handleCall}>
                   <Ionicons name="call-outline" size={20} color={Colors.light.primary} />
                 </TouchableOpacity>
               </View>

@@ -20,7 +20,7 @@ const getBaseUrl = () => {
   }
 
   // Fallback local IP for physical devices / emulators on local Wi-Fi
-  return 'http://192.168.0.109:8000';
+  return 'http://192.168.0.74:8000';
 };
 
 export const API_URL = getBaseUrl();
@@ -252,8 +252,12 @@ export const api = {
   cancelInterestByUser: (receiverId: number) => 
     apiRequest('DELETE', `/api/explore/interests/cancel-by-user/${receiverId}`),
 
-  getInterestStatus: (targetUserId: number) => 
-    apiRequest<{ sent: { id: number; status: string; created_at: string } | null; received: { id: number; status: string; created_at: string } | null }>('GET', `/api/explore/interests/status/${targetUserId}`),
+  getInterestStatus: (targetUserId: number) => {
+    if (!targetUserId || isNaN(Number(targetUserId)) || Number(targetUserId) <= 0) {
+      return Promise.resolve({ sent: null, received: null });
+    }
+    return apiRequest<{ sent: { id: number; status: string; created_at: string } | null; received: { id: number; status: string; created_at: string } | null }>('GET', `/api/explore/interests/status/${targetUserId}`);
+  },
     
   getReceivedInterests: () => apiRequest('GET', '/api/explore/interests/received'),
   
