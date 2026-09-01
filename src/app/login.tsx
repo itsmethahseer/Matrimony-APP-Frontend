@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/services/api';
+import { api, switchDemoUser, resetMockData, OFFLINE_MODE } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { Alert } from '../utils/alert';
 

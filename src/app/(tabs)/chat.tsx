@@ -55,7 +55,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const navigation = useNavigation();
 
-  const [activeFilter, setActiveFilter] = useState<'all' | 'requests' | 'chats' | 'calls'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'requests' | 'chats'>('all');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -114,8 +114,6 @@ export default function ChatScreen() {
         filteredData = data.filter((c: any) => c.last_message.message_type === 'chat');
       } else if (activeFilter === 'requests') {
         filteredData = data.filter((c: any) => c.last_message.message_type === 'request');
-      } else if (activeFilter === 'calls') {
-        filteredData = data.filter((c: any) => c.last_message.message_type === 'call');
       }
       setConversations(filteredData);
     } catch (error: any) {
@@ -223,17 +221,6 @@ export default function ChatScreen() {
     }
   };
 
-  const handleCall = async () => {
-    if (!activeChatUser) return;
-    try {
-      const callMsg = await api.sendMessage(activeChatUser.id, 'Voice Call Log', 'call', 60);
-      setMessages((prev) => [...prev, callMsg]);
-      Alert.alert('Call Connected', `Voice call simulated with ${activeChatUser.name}.`);
-    } catch (error: any) {
-      Alert.alert('Calling Unavailable', error.message || 'Calling is only available on an active paid membership plan.');
-    }
-  };
-
   const renderConversationItem = ({ item }: { item: Conversation }) => {
     const avatar = item.participant.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
     const isUnread = item.unread_count > 0;
@@ -243,10 +230,7 @@ export default function ChatScreen() {
     const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     let messagePreview = item.last_message.message_text || '';
-    if (item.last_message.message_type === 'call') {
-      const min = Math.ceil((item.last_message.call_duration || 0) / 60);
-      messagePreview = `📞 Voice Call Log (${min} min)`;
-    } else if (item.last_message.message_type === 'request') {
+    if (item.last_message.message_type === 'request') {
       messagePreview = `📬 Connection Request`;
     }
 
@@ -310,12 +294,6 @@ export default function ChatScreen() {
           >
             <Text style={[styles.filterText, activeFilter === 'chats' && styles.activeFilterText]}>Chats</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.filterChip, activeFilter === 'calls' && styles.activeFilterChip]}
-            onPress={() => setActiveFilter('calls')}
-          >
-            <Text style={[styles.filterText, activeFilter === 'calls' && styles.activeFilterText]}>Calls</Text>
-          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -368,10 +346,6 @@ export default function ChatScreen() {
                     {activeChatUser.is_online ? 'Online Now' : 'Active recently'}
                   </Text>
                 </View>
-                
-                <TouchableOpacity style={styles.chatCallBtn} onPress={handleCall}>
-                  <Ionicons name="call-outline" size={20} color={Colors.light.primary} />
-                </TouchableOpacity>
               </View>
             )}
 

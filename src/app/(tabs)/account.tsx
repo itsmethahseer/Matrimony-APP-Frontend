@@ -176,7 +176,6 @@ export default function AccountScreen() {
   const [photosModalVisible, setPhotosModalVisible] = useState(false);
   const [photosList, setPhotosList] = useState<any[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [newPhotoUrl, setNewPhotoUrl] = useState('');
 
   // Religion, Caste, Sub-Caste & Partner Preferences Modal States
   const [prefModalVisible, setPrefModalVisible] = useState(false);
@@ -626,23 +625,7 @@ export default function AccountScreen() {
     }
   };
 
-  const handleAddPhotoByUrl = async () => {
-    if (!newPhotoUrl.trim()) return;
-    setIsUploadingPhoto(true);
-    try {
-      const isFirst = photosList.length === 0;
-      await api.uploadPhoto(newPhotoUrl.trim(), isFirst);
-      setNewPhotoUrl('');
-      Alert.alert('Success', 'Photo uploaded from URL!');
-      const updatedPhotos = await api.getPhotos();
-      setPhotosList(updatedPhotos);
-      loadData();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add photo URL.');
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
+
 
   // --- Dynamic Religion, Caste & Partner Preference Functions ---
   const openPrefModal = async () => {
@@ -873,9 +856,9 @@ export default function AccountScreen() {
               </Text>
             </View>
             <View style={styles.quotaBox}>
-              <Text style={styles.quotaLabel}>MINUTES</Text>
+              <Text style={styles.quotaLabel}>CONTACT VIEWS</Text>
               <Text style={styles.quotaValue}>
-                {userData?.is_admin || summary.remaining_call_time >= 9999 ? '∞' : summary.remaining_call_time}
+                {userData?.is_admin || summary.remaining_contact_views >= 9999 ? '∞' : summary.remaining_contact_views}
               </Text>
             </View>
           </View>
@@ -896,7 +879,7 @@ export default function AccountScreen() {
                   ? (summary.is_expired 
                     ? `Expired on: ${new Date(summary.plan_validity).toLocaleDateString()}` 
                     : `Valid until: ${new Date(summary.plan_validity).toLocaleDateString()}`)
-                  : 'Upgrade to unlock calls & contact views')}
+                  : 'Upgrade to unlock contact views & messaging')}
             </Text>
             {!userData?.is_admin && (
               <TouchableOpacity 
@@ -1047,7 +1030,7 @@ export default function AccountScreen() {
                   <Text style={styles.planTitle}>Silver Plan</Text>
                   <Text style={styles.planPrice}>₹299 / mo</Text>
                 </View>
-                <Text style={styles.planDesc}>• 20 Contact Views • 200 Messages • 60 Mins Calls • 100 Credits • Validity: 30 days (1 Month)</Text>
+                <Text style={styles.planDesc}>• 20 Contact Views • 200 Messages • 100 Credits • Validity: 30 days (1 Month)</Text>
                 <Text style={[styles.planDesc, { color: Colors.light.primary, fontWeight: '600', marginTop: 4 }]}>✓ Unused credits rollover and extend upon recharge</Text>
               </TouchableOpacity>
  
@@ -1057,7 +1040,7 @@ export default function AccountScreen() {
                   <Text style={[styles.planTitle, { color: '#735c00' }]}>Gold Plan</Text>
                   <Text style={[styles.planPrice, { color: '#735c00' }]}>₹1,299 / 3 mos</Text>
                 </View>
-                <Text style={styles.planDesc}>• 100 Contact Views • 1000 Messages • 300 Mins Calls • 500 Credits • Validity: 90 days (3 Months)</Text>
+                <Text style={styles.planDesc}>• 100 Contact Views • 1000 Messages • 500 Credits • Validity: 90 days (3 Months)</Text>
                 <Text style={[styles.planDesc, { color: '#735c00', fontWeight: '600', marginTop: 4 }]}>✓ Unused credits rollover and extend upon recharge</Text>
               </TouchableOpacity>
  
@@ -1067,7 +1050,7 @@ export default function AccountScreen() {
                   <Text style={[styles.planTitle, { color: '#fff' }]}>Platinum Plan</Text>
                   <Text style={[styles.planPrice, { color: '#fff' }]}>₹2,499 / 6 mos</Text>
                 </View>
-                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Views & Credits • Unlimited Messages • 1000 Mins Calls • Validity: 180 days (6 Months)</Text>
+                <Text style={[styles.planDesc, { color: '#eee' }]}>• Unlimited Views & Credits • Unlimited Messages • Validity: 180 days (6 Months)</Text>
                 <Text style={[styles.planDesc, { color: '#fff', fontWeight: '600', marginTop: 4 }]}>✓ Unused credits rollover and extend upon recharge</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -1145,10 +1128,10 @@ export default function AccountScreen() {
             {supportData ? (
               <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.supportContactCard}>
-                  <Text style={styles.supportHeadline}>Need immediate assistance?</Text>
-                  <Text style={styles.supportDetail}>📧 Email: {supportData.support_email}</Text>
-                  <Text style={styles.supportDetail}>📞 Hotline: {supportData.hotline}</Text>
-                  <Text style={styles.supportDetail}>⏰ Hours: {supportData.operating_hours}</Text>
+                  <Text style={styles.supportHeadline}>Need Immediate assistance?</Text>
+                  <Text style={styles.supportDetail}>📧 Email: {supportData.support_email || supportData.email || 'support@helpmeet.com'}</Text>
+                  <Text style={styles.supportDetail}>📞 Hotline: {supportData.hotline || supportData.phone || '+91 98765 43210'}</Text>
+                  <Text style={styles.supportDetail}>⏰ Hours: {supportData.operating_hours || supportData.timings || '10 AM to 6 PM (IST)'}</Text>
                 </View>
 
                 <Text style={styles.faqHeader}>Frequently Asked Questions</Text>
@@ -2061,34 +2044,16 @@ export default function AccountScreen() {
               </Text>
 
               {/* Upload Controls */}
-              <View style={{ flexDirection: 'row', gap: 10, marginVertical: 15 }}>
+              <View style={{ marginVertical: 15 }}>
                 <TouchableOpacity
-                  style={[styles.verifyInput, { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', borderStyle: 'dashed', height: 75 }]}
+                  style={[styles.verifyInput, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9', borderStyle: 'dashed', height: 80 }]}
                   onPress={handlePickAndUploadPhoto}
                   disabled={isUploadingPhoto}
                 >
-                  <Ionicons name="camera-outline" size={26} color={Colors.light.primary} />
-                  <Text style={{ fontSize: 13, color: Colors.light.primary, fontWeight: 'bold', marginTop: 4 }}>
+                  <Ionicons name="camera-outline" size={28} color={Colors.light.primary} />
+                  <Text style={{ fontSize: 14, color: Colors.light.primary, fontWeight: 'bold', marginTop: 6 }}>
                     {isUploadingPhoto ? 'Uploading...' : 'Pick Image from Device'}
                   </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.inputLabel}>OR ADD PHOTO BY URL</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-                <TextInput
-                  style={[styles.paymentInput, { flex: 1, marginBottom: 0 }]}
-                  value={newPhotoUrl}
-                  onChangeText={setNewPhotoUrl}
-                  placeholder="https://images.unsplash.com/..."
-                  placeholderTextColor={Colors.light.textSecondary}
-                />
-                <TouchableOpacity
-                  style={{ backgroundColor: Colors.light.primary, paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}
-                  onPress={handleAddPhotoByUrl}
-                  disabled={isUploadingPhoto || !newPhotoUrl.trim()}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Add</Text>
                 </TouchableOpacity>
               </View>
 

@@ -8,9 +8,11 @@
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.helpmeet.matrimony",
+      "supportsTablet": true
     },
     "android": {
+      "package": "com.helpmeet.matrimony",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -35,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8a430b35-306e-428e-b558-1fbeeb49d1c2"
+      }
     }
   }
 }
