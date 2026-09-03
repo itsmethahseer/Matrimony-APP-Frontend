@@ -20,7 +20,7 @@ import { api } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { Alert } from '../../utils/alert';
 
-const { width } = Dimensions.get('window');
+const { width, height: screenHeight } = Dimensions.get('window');
 
 interface ProfileDetail {
   id: number;
@@ -78,6 +78,8 @@ export default function ProfileDetailsScreen() {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const lightboxScrollRef = useRef<ScrollView>(null);
 
   // Interest Status & 5-Second Countdown State
   const [interestStatus, setInterestStatus] = useState<{
@@ -386,17 +388,35 @@ export default function ProfileDetailsScreen() {
               }}
               scrollEventThrottle={16}
             >
-              {profile.photos.map((photo) => (
-                <Image 
-                  key={photo.id} 
-                  source={{ uri: photo.url }} 
-                  style={{ width: width, height: '100%' }} 
-                  resizeMode="cover"
-                />
+              {profile.photos.map((photo, idx) => (
+                <TouchableOpacity
+                  key={photo.id}
+                  activeOpacity={0.95}
+                  onPress={() => {
+                    setCurrentImageIndex(idx);
+                    setLightboxVisible(true);
+                  }}
+                  style={{ width: width, height: '100%' }}
+                >
+                  <Image 
+                    source={{ uri: photo.url }} 
+                    style={{ width: width, height: '100%' }} 
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
               ))}
             </ScrollView>
           ) : (
-            <Image source={{ uri: primaryPhoto }} style={styles.heroImage} />
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={() => {
+                setCurrentImageIndex(0);
+                setLightboxVisible(true);
+              }}
+              style={{ width: '100%', height: '100%' }}
+            >
+              <Image source={{ uri: primaryPhoto }} style={styles.heroImage} />
+            </TouchableOpacity>
           )}
 
           {/* Indicator dots for multiple photos */}
@@ -736,6 +756,116 @@ export default function ProfileDetailsScreen() {
               )}
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Fullscreen Image Lightbox */}
+      <Modal
+        visible={lightboxVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxVisible(false)}
+        onShow={() => {
+          // Scroll to the currently active image index after modal finishes opening
+          setTimeout(() => {
+            lightboxScrollRef.current?.scrollTo({ x: currentImageIndex * width, animated: false });
+          }, 50);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+
+          {/* Back arrow — top left */}
+          <TouchableOpacity
+            onPress={() => setLightboxVisible(false)}
+            style={{
+              position: 'absolute',
+              top: Platform.OS === 'ios' ? 52 : 32,
+              left: 16,
+              zIndex: 20,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              borderRadius: 20,
+              padding: 8,
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Photo counter — top center */}
+          {profile.photos && profile.photos.length > 1 && (
+            <View style={{
+              position: 'absolute',
+              top: Platform.OS === 'ios' ? 55 : 35,
+              left: 0,
+              right: 0,
+              alignItems: 'center',
+              zIndex: 10,
+            }}>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                {currentImageIndex + 1} / {profile.photos.length}
+              </Text>
+            </View>
+          )}
+
+          {/* Close (X) button — top right */}
+          <TouchableOpacity
+            onPress={() => setLightboxVisible(false)}
+            style={{
+              position: 'absolute',
+              top: Platform.OS === 'ios' ? 52 : 32,
+              right: 16,
+              zIndex: 20,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              borderRadius: 20,
+              padding: 8,
+            }}
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Swipeable full images — tap anywhere to close */}
+          <ScrollView
+            ref={lightboxScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={{ flex: 1 }}
+            onScroll={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+              if (idx !== currentImageIndex) setCurrentImageIndex(idx);
+            }}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+          >
+            {(profile.photos && profile.photos.length > 0 ? profile.photos : [{ id: 0, url: primaryPhoto, is_main: true }]).map((photo, idx) => (
+              <TouchableOpacity
+                key={photo.id || idx}
+                activeOpacity={1}
+                onPress={() => setLightboxVisible(false)}
+                style={{ width, height: screenHeight, justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Image
+                  source={{ uri: photo.url }}
+                  style={{ width, height: screenHeight }}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Bottom hint */}
+          <View style={{
+            position: 'absolute',
+            bottom: 32,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            zIndex: 10,
+          }}>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+              Tap image or ← to close
+            </Text>
+          </View>
+
         </View>
       </Modal>
 

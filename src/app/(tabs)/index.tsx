@@ -225,6 +225,9 @@ export default function DiscoverScreen() {
   const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Preference Setup Modal States
   const [prefModalVisible, setPrefModalVisible] = useState(false);
@@ -295,13 +298,43 @@ export default function DiscoverScreen() {
 
   const loadProfiles = async (category: string) => {
     setIsLoading(true);
+    setCurrentPage(1);
+    setHasMore(true);
     try {
       const data = await api.getMatches(category);
       setProfiles(data);
+      // If the API returns fewer than a typical page size, no more to load
+      setHasMore(data.length >= 10);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Could not load matches');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadMoreProfiles = async () => {
+    if (isLoadingMore || !hasMore || isLoading) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const data = await api.getMatches(selectedCategory);
+      if (data.length === 0) {
+        setHasMore(false);
+      } else {
+        // Append only profiles not already in the list (dedup by id)
+        setProfiles((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newProfiles = data.filter((p: Profile) => !existingIds.has(p.id));
+          if (newProfiles.length === 0) setHasMore(false);
+          return [...prev, ...newProfiles];
+        });
+        setCurrentPage(nextPage);
+      }
+    } catch (error: any) {
+      // Silently fail — don't disrupt the user experience
+      console.error('Load more error:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -469,14 +502,26 @@ export default function DiscoverScreen() {
           renderItem={renderProfileCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onEndReachedThreshold={0.01}
+          onEndReached={loadMoreProfiles}
+          onEndReachedThreshold={0.3}
           ListFooterComponent={
-            <View style={{ alignItems: 'center', paddingVertical: 28, paddingBottom: 40 }}>
-              <View style={{ width: 40, height: 1, backgroundColor: '#e0d5d0', marginBottom: 12 }} />
-              <Text style={{ fontSize: 13, color: Colors.light.textSecondary, letterSpacing: 0.3 }}>
-                You've seen all profiles
-              </Text>
-            </View>
+            isLoadingMore ? (
+              // Loading more profiles spinner
+              <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                <ActivityIndicator size="small" color={Colors.light.primary} />
+                <Text style={{ fontSize: 12, color: Colors.light.textSecondary, marginTop: 8 }}>
+                  Loading more profiles...
+                </Text>
+              </View>
+            ) : !hasMore ? (
+              // All profiles loaded — end of list
+              <View style={{ alignItems: 'center', paddingVertical: 28, paddingBottom: 40 }}>
+                <View style={{ width: 40, height: 1, backgroundColor: '#e0d5d0', marginBottom: 12 }} />
+                <Text style={{ fontSize: 13, color: Colors.light.textSecondary, letterSpacing: 0.3 }}>
+                  You've seen all profiles
+                </Text>
+              </View>
+            ) : null
           }
         />
       )}
