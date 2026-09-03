@@ -469,6 +469,15 @@ export default function DiscoverScreen() {
           renderItem={renderProfileCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onEndReachedThreshold={0.01}
+          ListFooterComponent={
+            <View style={{ alignItems: 'center', paddingVertical: 28, paddingBottom: 40 }}>
+              <View style={{ width: 40, height: 1, backgroundColor: '#e0d5d0', marginBottom: 12 }} />
+              <Text style={{ fontSize: 13, color: Colors.light.textSecondary, letterSpacing: 0.3 }}>
+                You've seen all profiles
+              </Text>
+            </View>
+          }
         />
       )}
 
@@ -813,9 +822,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '60%',
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Bottom dark gradient simulation
+    height: 90,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   badge: {
     position: 'absolute',

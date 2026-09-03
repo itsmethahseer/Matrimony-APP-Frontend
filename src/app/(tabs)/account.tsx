@@ -900,11 +900,11 @@ export default function AccountScreen() {
             <View style={styles.menuItemLeft}>
               <Ionicons name="images-outline" size={22} color={Colors.light.primary} />
               <View>
-                <Text style={styles.menuItemText}>Manage Photos & Profile DP</Text>
-                <Text style={styles.menuItemSubtext}>Upload photos, set main DP & manage gallery</Text>
+                <Text style={styles.menuItemText}>Manage Photos & Profile Picture</Text>
+                <Text style={styles.menuItemSubtext}>Upload photos, set main picture & manage gallery</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={openPrefModal}>
@@ -915,7 +915,7 @@ export default function AccountScreen() {
                 <Text style={styles.menuItemSubtext}>Set dynamic religion, caste, sub-caste & expectations</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={openEditProfile}>
@@ -926,7 +926,7 @@ export default function AccountScreen() {
                 <Text style={styles.menuItemSubtext}>Personal info, education, family & lifestyle</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -943,7 +943,7 @@ export default function AccountScreen() {
               <Ionicons name="eye-outline" size={22} color={Colors.light.primary} />
               <Text style={styles.menuItemText}>Preview My Profile</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+
           </TouchableOpacity>
 
           {!userData?.is_admin && (
@@ -952,7 +952,7 @@ export default function AccountScreen() {
                 <Ionicons name="card-outline" size={22} color={Colors.light.primary} />
                 <Text style={styles.menuItemText}>Subscriptions & Billing</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+
             </TouchableOpacity>
           )}
 
@@ -966,15 +966,7 @@ export default function AccountScreen() {
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
-          </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={openSupport}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="help-circle-outline" size={22} color={Colors.light.primary} />
-              <Text style={styles.menuItemText}>Help & Support</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => setSettingsModalVisible(true)}>
@@ -985,7 +977,15 @@ export default function AccountScreen() {
                 <Text style={styles.menuItemSubtext}>Notifications, privacy preferences & session controls</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={openSupport}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="help-circle-outline" size={22} color={Colors.light.primary} />
+              <Text style={styles.menuItemText}>Help & Support</Text>
+            </View>
+
           </TouchableOpacity>
 
           {/* Admin Console Option (Visible Only For Admin Users) */}
