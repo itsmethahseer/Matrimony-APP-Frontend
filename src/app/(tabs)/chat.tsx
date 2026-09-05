@@ -68,6 +68,8 @@ export default function ChatScreen() {
   const pollingRef = useRef<any>(null);
   const flatListRef = useRef<FlatList | null>(null);
   const autoChatProcessedRef = useRef<number | null>(null);
+  // Track remaining message balance locally so it reflects after sends
+  const [remainingMessages, setRemainingMessages] = useState<number | null>(null);
 
   // Hide the parent bottom tabs layout when an active user chat is open
   useEffect(() => {
@@ -121,6 +123,11 @@ export default function ChatScreen() {
     } finally {
       setIsLoading(false);
     }
+    // Silently refresh message balance so it stays up to date
+    try {
+      const menu = await api.getMenuSummary();
+      setRemainingMessages(menu.remaining_messages ?? null);
+    } catch (_) {}
   };
 
   const handleAutoOpenChat = async (targetId: number) => {
@@ -216,6 +223,10 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, sentMsg]);
       // Scroll to bottom
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      // Silently refresh credit/message balance after each successful send
+      api.getMenuSummary().then((menu) => {
+        setRemainingMessages(menu.remaining_messages ?? null);
+      }).catch(() => {});
     } catch (error: any) {
       Alert.alert('Message Failed', error.message || 'Could not send message.');
     }
@@ -384,6 +395,16 @@ export default function ChatScreen() {
                 contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
               />
+            )}
+
+            {/* Live message balance badge */}
+            {remainingMessages !== null && (
+              <View style={styles.balanceBadge}>
+                <Ionicons name="chatbubble-outline" size={12} color={remainingMessages === 9999 ? Colors.light.primary : remainingMessages <= 5 ? '#ef4444' : '#64748b'} />
+                <Text style={[styles.balanceText, remainingMessages <= 5 && remainingMessages !== 9999 && { color: '#ef4444' }]}>
+                  {remainingMessages === 9999 ? 'Unlimited msgs' : `${remainingMessages} msgs left`}
+                </Text>
+              </View>
             )}
 
             {/* Chat Input */}
@@ -667,5 +688,20 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     backgroundColor: 'rgba(87, 0, 19, 0.3)',
+  },
+  balanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    backgroundColor: '#f8fafc',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    gap: 5,
+  },
+  balanceText: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
   },
 });

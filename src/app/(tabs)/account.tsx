@@ -217,7 +217,37 @@ export default function AccountScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      // Run every time this tab is focused — after any action in another
+      // screen (send interest, send message, view contact) the balance here
+      // will be up-to-date immediately when the user switches back.
+      let active = true;
+      const fetchLatest = async () => {
+        try {
+          const menuData = await api.getMenuSummary();
+          if (active) setSummary(menuData);
+
+          const me = await api.getMe();
+          if (active) setUserData(me);
+
+          const config = await api.getPaymentConfig();
+          if (active) {
+            setMerchantUpiId(config.merchant_upi_id);
+            setMerchantName(config.merchant_name);
+          }
+
+          const profile = await api.getMyProfile();
+          if (active) {
+            setMyProfile(profile);
+            if (profile?.photos) setPhotosList(profile.photos);
+          }
+        } catch (error: any) {
+          console.error(error);
+        } finally {
+          if (active) setIsLoading(false);
+        }
+      };
+      fetchLatest();
+      return () => { active = false; };
     }, [])
   );
 

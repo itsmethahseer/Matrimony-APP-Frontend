@@ -72,6 +72,7 @@ export default function ProfileDetailsScreen() {
   // Contact unlocked state
   const [isContactUnlocked, setIsContactUnlocked] = useState(false);
   const [creditsRemaining, setCreditsRemaining] = useState(0);
+  const [userPlanType, setUserPlanType] = useState<string | null>(null);
   const [isPlanActive, setIsPlanActive] = useState(true);
   const [isPlanExpired, setIsPlanExpired] = useState(false);
   const [isCreditModalVisible, setIsCreditModalVisible] = useState(false);
@@ -80,6 +81,16 @@ export default function ProfileDetailsScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const lightboxScrollRef = useRef<ScrollView>(null);
+
+  // Compute actual contact view credit cost based on user plan
+  const getContactViewCost = (plan: string | null): number => {
+    const p = (plan || '').toLowerCase();
+    if (p === 'platinum') return 0;
+    if (p === 'gold') return 3;
+    if (p === 'silver') return 4;
+    return 5; // Free tier
+  };
+  const contactViewCost = getContactViewCost(userPlanType);
 
   // Interest Status & 5-Second Countdown State
   const [interestStatus, setInterestStatus] = useState<{
@@ -127,6 +138,7 @@ export default function ProfileDetailsScreen() {
       // 4. Fetch menu summary to see credit balance and plan status
       const menu = await api.getMenuSummary();
       setCreditsRemaining(menu.credits ?? 0);
+      setUserPlanType(menu.plan_type ?? null);
       setCurrentUserId(menu.user_id);
       setIsPlanActive(menu.is_plan_active ?? (menu.membership_status === 'Premium' || menu.membership_status === 'Admin'));
       setIsPlanExpired(menu.is_expired ?? (menu.membership_status === 'Expired'));
@@ -332,10 +344,11 @@ export default function ProfileDetailsScreen() {
       // Reload profile to populate unmasked contact information (numbers, address, etc.)
       const updatedProfile = await api.getProfileById(profileId);
       setProfile(updatedProfile);
-      // Refresh user credits
+      // Refresh user credits and plan info
       try {
         const menu = await api.getMenuSummary();
         setCreditsRemaining(menu.credits ?? 0);
+        setUserPlanType(menu.plan_type ?? null);
       } catch (e) {
         // silent
       }
@@ -732,7 +745,8 @@ export default function ProfileDetailsScreen() {
               ) : (
                 <>
                   <Text style={styles.alertText}>
-                    Unlocking contact details requires <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>5 Credits</Text>. You will be charged directly from your subscription balance.
+                    Unlocking contact details requires <Text style={{ fontWeight: 'bold', color: Colors.light.primary }}>{contactViewCost === 0 ? 'No' : contactViewCost} Credit{contactViewCost !== 1 ? 's' : ''}</Text>
+                    {contactViewCost === 0 ? ' (Unlimited — Platinum Plan)' : `. You will be charged directly from your ${userPlanType || 'subscription'} plan balance.`}
                   </Text>
 
                   <Text style={{ textAlign: 'center', fontSize: 13, color: Colors.light.textSecondary, marginBottom: 4 }}>
