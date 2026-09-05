@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   FlatList,
   Image,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import {
   Platform,
   StatusBar as RNStatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/services/api';
 import { Colors } from '@/constants/theme';

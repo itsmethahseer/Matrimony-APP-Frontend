@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  SafeAreaView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
   Modal,
   StatusBar as RNStatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api, switchDemoUser, resetMockData, OFFLINE_MODE } from '@/services/api';
