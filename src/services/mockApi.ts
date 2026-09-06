@@ -757,6 +757,45 @@ interface MockDB {
 }
 
 let memoryDb: MockDB | null = null;
+
+// --- Phone Number Detection & Stripping Utility ---
+const PHONE_REGEX = /(?:(?:\+|00)\d{1,3}[-.\s]?)?(?:0\d{1,4}[-.\s]?)?(?:\d[-.\s]?){7,13}\d/gi;
+const DIGIT_WORDS: Record<string, string> = {
+  zero: '0', one: '1', two: '2', three: '3', four: '4',
+  five: '5', six: '6', seven: '7', eight: '8', nine: '9',
+  oh: '0',
+};
+const DIGIT_WORD_PATTERN = new RegExp(
+  '(?:(?:' + Object.keys(DIGIT_WORDS).join('|') + ')\\s*){7,}', 'gi'
+);
+
+function containsPhoneNumber(text: string | null | undefined): boolean {
+  if (!text) return false;
+  PHONE_REGEX.lastIndex = 0;
+  if (PHONE_REGEX.test(text)) return true;
+  DIGIT_WORD_PATTERN.lastIndex = 0;
+  if (DIGIT_WORD_PATTERN.test(text)) return true;
+  return false;
+}
+
+function stripPhoneNumbers(text: string | null | undefined): string | null | undefined {
+  if (!text) return text;
+  PHONE_REGEX.lastIndex = 0;
+  let result = text.replace(PHONE_REGEX, '[number removed]');
+  DIGIT_WORD_PATTERN.lastIndex = 0;
+  result = result.replace(DIGIT_WORD_PATTERN, '[number removed]');
+  return result;
+}
+
+// Fields where phone numbers should be stripped automatically in profiles
+const PHONE_SANITIZE_FIELDS = new Set([
+  'tagline', 'profile_description', 'about',
+  'marriage_goals', 'marriage_plan', 'additional_marriage_plan',
+  'education_profession_description', 'appearance_description',
+  'family_details', 'personality', 'partner_expectation',
+  'health_or_disabilities',
+]);
+
 let currentUserId: number = 2; // Default Ahmed Khan
 
 // Load or initialize DB
@@ -993,6 +1032,17 @@ export const mockApi = {
     await delay();
     const db = await getDb();
     let profile = db.profiles.find((p) => p.user_id === currentUserId);
+    
+    // Sanitize text fields — strip phone numbers from description-type fields
+    const sanitizedData: any = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (PHONE_SANITIZE_FIELDS.has(key) && typeof val === 'string') {
+        sanitizedData[key] = stripPhoneNumbers(val);
+      } else {
+        sanitizedData[key] = val;
+      }
+    }
+    
     if (!profile) {
       const newProf: any = {
         id: currentUserId,
@@ -1033,12 +1083,12 @@ export const mockApi = {
         partner_age_max: 27,
         partner_height_min: 155.0,
         partner_height_max: 170.0,
-        ...data,
+        ...sanitizedData,
       };
       db.profiles.push(newProf);
       profile = newProf;
     } else {
-      Object.assign(profile, data);
+      Object.assign(profile, sanitizedData);
     }
     await saveDb(db);
     return buildFullProfile(profile, db);
@@ -1433,6 +1483,23 @@ export const mockApi = {
   sendMessage: async (receiverId: number, text: string, type: 'chat' | 'request' = 'chat', duration?: number) => {
     await delay();
     const db = await getDb();
+    const user = db.users.find((u) => u.id === currentUserId);
+
+    // Check for phone numbers in message text — reject if found
+    if (containsPhoneNumber(text)) {
+      throw new Error('Sharing phone numbers via chat is not allowed. Contact details can only be viewed through the profile unlock feature.');
+    }
+
+    // Only active plan users can send messages (skip for admin)
+    if (user && !(user as any).is_admin) {
+      const hasPlan = user.membership_status === 'Premium' && user.plan_type &&
+        ['silver', 'gold', 'platinum'].includes(String(user.plan_type).toLowerCase()) &&
+        user.plan_validity && new Date(user.plan_validity) > new Date();
+      if (!hasPlan) {
+        throw new Error('Chat is a premium feature. Please upgrade to a Silver, Gold, or Platinum plan to send messages.');
+      }
+    }
+
     const newId = Math.max(...db.messages.map((m) => m.id), 0) + 1;
     const newMsg = {
       id: newId,

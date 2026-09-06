@@ -70,6 +70,7 @@ export default function ChatScreen() {
   const autoChatProcessedRef = useRef<number | null>(null);
   // Track remaining message balance locally so it reflects after sends
   const [remainingMessages, setRemainingMessages] = useState<number | null>(null);
+  const [hasPlan, setHasPlan] = useState<boolean>(true); // assume true until loaded
 
   // Hide the parent bottom tabs layout when an active user chat is open
   useEffect(() => {
@@ -127,6 +128,7 @@ export default function ChatScreen() {
     try {
       const menu = await api.getMenuSummary();
       setRemainingMessages(menu.remaining_messages ?? null);
+      setHasPlan(menu.is_plan_active === true);
     } catch (_) {}
   };
 
@@ -408,23 +410,34 @@ export default function ChatScreen() {
             )}
 
             {/* Chat Input */}
-            <View style={styles.chatInputBar}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Type your message..."
-                placeholderTextColor="#999"
-                value={inputText}
-                onChangeText={setInputText}
-                multiline
-              />
-              <TouchableOpacity 
-                style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
-                onPress={handleSend}
-                disabled={!inputText.trim()}
-              >
-                <Ionicons name="send" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            {hasPlan ? (
+              <View style={styles.chatInputBar}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Type your message..."
+                  placeholderTextColor="#999"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                />
+                <TouchableOpacity 
+                  style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+                  onPress={handleSend}
+                  disabled={!inputText.trim()}
+                >
+                  <Ionicons name="send" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.chatInputBar}>
+                <View style={styles.upgradeBanner}>
+                  <Ionicons name="lock-closed" size={16} color={Colors.light.primary} />
+                  <Text style={styles.upgradeBannerText}>
+                    Chat is a premium feature. Upgrade your plan to send messages.
+                  </Text>
+                </View>
+              </View>
+            )}
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
@@ -703,5 +716,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748b',
     fontWeight: '500',
+  },
+  upgradeBanner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(87, 0, 19, 0.06)',
+    borderRadius: 20,
+    gap: 8,
+  },
+  upgradeBannerText: {
+    fontSize: 13,
+    color: Colors.light.primary,
+    fontWeight: '600',
+    flexShrink: 1,
   },
 });
