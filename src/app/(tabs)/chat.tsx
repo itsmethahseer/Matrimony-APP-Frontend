@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar as RNStatusBar,
   BackHandler,
   Modal,
 } from 'react-native';
@@ -449,7 +448,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
-    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   appBar: {
     paddingHorizontal: 20,
@@ -589,7 +587,6 @@ const styles = StyleSheet.create({
   chatWindow: {
     flex: 1,
     backgroundColor: '#fff8f5',
-    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   chatHeader: {
     flexDirection: 'row',

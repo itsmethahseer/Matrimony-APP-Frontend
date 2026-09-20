@@ -8,10 +8,10 @@ import {
   Text,
   Animated,
   StyleSheet,
+  StatusBar,
+  Platform,
 } from 'react-native';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/theme';
 import { registerAlertListener, AlertButton } from '../utils/alert';
 import { onUnauthorized } from '@/services/api';
@@ -153,7 +153,11 @@ export default function RootLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.light.background }}>
-      <StatusBar style="dark" animated />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#f8fafc"
+        translucent={false}
+      />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  StatusBar as RNStatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -243,7 +242,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
-    paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : 0,
   },
   appBar: {
     paddingHorizontal: 20,
