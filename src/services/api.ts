@@ -409,6 +409,21 @@ export const api = {
     if (OFFLINE_MODE) return mockApi.subscribePlan(planType);
     return apiRequest('POST', '/api/menu/subscribe', { plan_type: planType, payment_status: 'Success' });
   },
+
+  submitPaymentRequest: (planType: string, upiTxId: string, amount: number) => {
+    if (OFFLINE_MODE) return mockApi.submitPaymentRequest(planType, upiTxId, amount);
+    return apiRequest('POST', '/api/menu/payment-request', { plan_type: planType, upi_tx_id: upiTxId, amount });
+  },
+
+  getPendingPayments: () => {
+    if (OFFLINE_MODE) return mockApi.getPendingPayments();
+    return apiRequest<any[]>('GET', '/api/admin/pending-payments');
+  },
+
+  reviewPayment: (requestId: number, action: 'approve' | 'reject') => {
+    if (OFFLINE_MODE) return mockApi.reviewPayment(requestId, action);
+    return apiRequest('POST', `/api/admin/review-payment/${requestId}`, { action });
+  },
     
   renewPlan: () => {
     if (OFFLINE_MODE) return mockApi.renewPlan();

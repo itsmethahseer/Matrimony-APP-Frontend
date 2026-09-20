@@ -1,14 +1,20 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-import { Platform, ViewStyle } from 'react-native';
+import { Platform, View, ViewStyle } from 'react-native';
+
+// Tab bar height + bottom offset — used for scroll padding in all screens
+export const TAB_BAR_BOTTOM = Platform.OS === 'ios' ? 22 : (Platform.OS === 'android' ? 14 : 0);
+export const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 68 : 64;
+// Total space the tab bar occupies from the very bottom of the screen
+export const TAB_BAR_TOTAL_HEIGHT = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM;
 
 export const DEFAULT_TAB_BAR_STYLE: ViewStyle = {
   position: Platform.OS === 'web' ? 'relative' : 'absolute',
-  bottom: Platform.OS === 'ios' ? 22 : (Platform.OS === 'android' ? 14 : 0),
+  bottom: TAB_BAR_BOTTOM,
   left: Platform.OS === 'web' ? 0 : 16,
   right: Platform.OS === 'web' ? 0 : 16,
-  height: Platform.OS === 'ios' ? 68 : 64,
+  height: TAB_BAR_HEIGHT,
   backgroundColor: '#ffffff',
   borderRadius: Platform.OS === 'web' ? 0 : 28,
   borderTopWidth: Platform.OS === 'web' ? 1 : 0,
@@ -37,6 +43,23 @@ export default function TabsLayout() {
           marginTop: 2,
         },
         headerShown: false,
+        // This renders an opaque backdrop behind the floating tab bar
+        // It fills the gap between the pill and the screen edge,
+        // preventing touches from passing through to content behind it.
+        tabBarBackground: () =>
+          Platform.OS !== 'web' ? (
+            <View
+              style={{
+                position: 'absolute',
+                bottom: -TAB_BAR_BOTTOM,
+                left: -16,
+                right: -16,
+                height: TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 4,
+                backgroundColor: '#f8fafc',
+              }}
+              pointerEvents="box-only"
+            />
+          ) : null,
       }}
     >
       <Tabs.Screen

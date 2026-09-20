@@ -754,6 +754,18 @@ interface MockDB {
   blockedUsers: Array<{ user_id: number; blocked_id: number }>;
   passedUsers: Array<{ user_id: number; passed_id: number }>;
   feedback: Array<{ user_id: number; rating: number; comment: string; created_at: string }>;
+  paymentRequests: Array<{
+    id: number;
+    user_id: number;
+    user_name: string;
+    user_email: string;
+    plan_type: string;
+    amount: number;
+    upi_tx_id: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    submitted_at: string;
+    reviewed_at: string | null;
+  }>;
 }
 
 let memoryDb: MockDB | null = null;
@@ -806,6 +818,10 @@ async function getDb(): Promise<MockDB> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       memoryDb = JSON.parse(raw);
+      // Migrate: ensure new fields exist in stored DB
+      if (memoryDb && !memoryDb.paymentRequests) {
+        memoryDb.paymentRequests = [];
+      }
     }
   } catch (e) {
     console.warn('Error reading mock db from storage:', e);
@@ -825,6 +841,7 @@ async function getDb(): Promise<MockDB> {
       blockedUsers: [],
       passedUsers: [],
       feedback: [],
+      paymentRequests: [],
     };
     await saveDb(memoryDb);
   }
@@ -1595,6 +1612,89 @@ export const mockApi = {
       is_expired: user.plan_validity ? new Date(user.plan_validity) < new Date() : false,
       is_plan_active: user.membership_status === 'Premium',
     };
+  },
+
+  // --- UPI Payment Request (Admin Verification Flow) ---
+  submitPaymentRequest: async (planType: string, upiTxId: string, amount: number) => {
+    await delay();
+    const db = await getDb();
+    const user = db.users.find((u) => u.id === currentUserId);
+    const profile = db.profiles.find((p) => p.user_id === currentUserId);
+    if (!user) throw new Error('User not found');
+
+    // Prevent duplicate pending TX ID
+    const duplicate = db.paymentRequests.find(
+      (r) => r.upi_tx_id === upiTxId.trim() && r.status === 'Pending'
+    );
+    if (duplicate) {
+      throw new Error('A payment request with this Transaction ID is already pending review.');
+    }
+
+    const newId = db.paymentRequests.length > 0
+      ? Math.max(...db.paymentRequests.map((r) => r.id)) + 1
+      : 1;
+
+    db.paymentRequests.push({
+      id: newId,
+      user_id: currentUserId,
+      user_name: profile?.name || user.email,
+      user_email: user.email,
+      plan_type: planType,
+      amount,
+      upi_tx_id: upiTxId.trim(),
+      status: 'Pending',
+      submitted_at: new Date().toISOString(),
+      reviewed_at: null,
+    });
+    await saveDb(db);
+    return { message: 'Payment submitted for verification.' };
+  },
+
+  getPendingPayments: async () => {
+    await delay();
+    const db = await getDb();
+    return db.paymentRequests.filter((r) => r.status === 'Pending');
+  },
+
+  reviewPayment: async (requestId: number, action: 'approve' | 'reject') => {
+    await delay();
+    const db = await getDb();
+    const request = db.paymentRequests.find((r) => r.id === requestId);
+    if (!request) throw new Error('Payment request not found.');
+    if (request.status !== 'Pending') throw new Error('This request has already been reviewed.');
+
+    request.status = action === 'approve' ? 'Approved' : 'Rejected';
+    request.reviewed_at = new Date().toISOString();
+
+    if (action === 'approve') {
+      const user = db.users.find((u) => u.id === request.user_id);
+      if (user) {
+        user.membership_status = 'Premium';
+        user.plan_type = request.plan_type;
+        if (request.plan_type === 'Platinum') {
+          user.remaining_contact_views = 9999;
+          user.remaining_messages = 9999;
+          user.remaining_call_time = 1000;
+          user.credits += 1000;
+          user.plan_validity = new Date(Date.now() + 180 * 86400000).toISOString();
+        } else if (request.plan_type === 'Gold') {
+          user.remaining_contact_views = 100;
+          user.remaining_messages = 1000;
+          user.remaining_call_time = 300;
+          user.credits += 500;
+          user.plan_validity = new Date(Date.now() + 90 * 86400000).toISOString();
+        } else {
+          user.remaining_contact_views = 20;
+          user.remaining_messages = 200;
+          user.remaining_call_time = 60;
+          user.credits += 100;
+          user.plan_validity = new Date(Date.now() + 30 * 86400000).toISOString();
+        }
+      }
+    }
+
+    await saveDb(db);
+    return { message: action === 'approve' ? 'Plan activated for user!' : 'Payment request rejected.' };
   },
 
   subscribePlan: async (planType: string) => {

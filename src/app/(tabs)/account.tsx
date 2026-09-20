@@ -19,6 +19,7 @@ import { Colors } from '@/constants/theme';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from '../../utils/alert';
+import * as IntentLauncher from 'expo-intent-launcher';
 
 const RELIGION_CASTE_MAP: Record<string, string[]> = {
   Islam: ['Sunni', 'Shia', 'Deobandi', 'Barelvi', 'Ahmadiyya', 'Other'],
@@ -66,10 +67,11 @@ export default function AccountScreen() {
 
   // Admin Console States
   const [adminModalVisible, setAdminModalVisible] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'docs' | 'photos' | 'users'>('docs');
+  const [adminActiveTab, setAdminActiveTab] = useState<'docs' | 'photos' | 'users' | 'payments'>('payments');
   const [adminPendingDocs, setAdminPendingDocs] = useState<any[]>([]);
   const [adminPendingPhotos, setAdminPendingPhotos] = useState<any[]>([]);
   const [adminUsersList, setAdminUsersList] = useState<any[]>([]);
+  const [adminPendingPayments, setAdminPendingPayments] = useState<any[]>([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
 
   // Verification form state
@@ -282,6 +284,8 @@ export default function AccountScreen() {
       setAdminPendingPhotos(verifications.photos || []);
       const users = await api.getAdminUsers();
       setAdminUsersList(users || []);
+      const payments = await api.getPendingPayments();
+      setAdminPendingPayments(payments || []);
     } catch (err: any) {
       Alert.alert('Admin Access', err.message || 'Failed to load admin verification data.');
     } finally {
@@ -334,54 +338,104 @@ export default function AccountScreen() {
     }
   };
 
+  const handleApprovePayment = async (requestId: number) => {
+    try {
+      await api.reviewPayment(requestId, 'approve');
+      Alert.alert('Plan Activated ✅', 'Payment verified and plan activated for the user!');
+      await loadAdminData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not approve payment.');
+    }
+  };
+
+  const handleRejectPayment = async (requestId: number) => {
+    try {
+      await api.reviewPayment(requestId, 'reject');
+      Alert.alert('Rejected', 'Payment request rejected. Plan will not be activated.');
+      await loadAdminData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not reject payment.');
+    }
+  };
+
   const handleSelectPlan = (plan: 'Silver' | 'Gold' | 'Platinum') => {
     setSelectedPlan(plan);
     setSubModalVisible(false);
     setPayModalVisible(true);
     setPaymentMethod('upi');
     setUpiTxId('');
-    // Preset mock details for easy testing
-    setCardNumber('4111 2222 3333 4444');
-    setCardExpiry('12/28');
-    setCardCvv('123');
-    setCardName('Test User');
   };
 
   const handleUpiPayIntent = async () => {
     if (!selectedPlan) return;
+
+    if (Platform.OS === 'web') {
+      Alert.alert('Scan QR Code', 'Please scan the QR code using Google Pay, PhonePe, or Paytm to complete payment.');
+      return;
+    }
+
     const price = getPlanPrice(selectedPlan);
-    const upiUrl = `upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${price}&cu=INR&tn=${encodeURIComponent(selectedPlan + ' Plan Upgrade')}`;
-    
-    try {
-      const supported = await Linking.canOpenURL(upiUrl);
-      if (supported) {
-        await Linking.openURL(upiUrl);
-      } else {
-        if (Platform.OS === 'web') {
-          Alert.alert('Scan QR Code', 'Please scan the QR code using Google Pay, PhonePe, or Paytm on your mobile phone to complete payment.');
-        } else {
-          Alert.alert('No UPI App Found', 'Could not open any UPI app on this device. Please scan the QR code or use Card payment.');
-        }
+    const upiData = `upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${price}&cu=INR&tn=${encodeURIComponent(selectedPlan + ' Plan Upgrade')}`;
+
+    if (Platform.OS === 'android') {
+      // expo-intent-launcher calls Android's startActivity() directly —
+      // works in BOTH Expo Go and production APK builds.
+      // ACTION_VIEW with the upi:// data shows the system UPI app chooser.
+      try {
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: upiData,
+          flags: 1, // FLAG_ACTIVITY_NEW_TASK
+        });
+        return;
+      } catch (intentErr) {
+        // Intent launcher failed — try Linking as backup
       }
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'An error occurred opening the UPI application.');
+
+      // Backup: Linking (works in production APK if intent launcher is unavailable)
+      try {
+        await Linking.openURL(upiData);
+        return;
+      } catch (_) { /* fall through to error */ }
+
+      Alert.alert(
+        'Cannot Open UPI App',
+        'Please ensure Google Pay, PhonePe, or Paytm is installed, then try again. You can also scan the QR code above.',
+        [{ text: 'OK' }],
+      );
+    } else {
+      // iOS — Linking is the only option (UPI apps support upi:// on iOS too)
+      try {
+        await Linking.openURL(upiData);
+      } catch (_) {
+        Alert.alert('Cannot Open UPI App', 'Please scan the QR code above to pay.');
+      }
     }
   };
 
   const handleUpgrade = async () => {
     if (!selectedPlan) return;
+
+    if (!upiTxId || upiTxId.trim().length < 6) {
+      Alert.alert(
+        'Transaction ID Required',
+        'Please complete the UPI payment first, then enter the Transaction ID / UTR number received from your UPI app.',
+      );
+      return;
+    }
+
     setIsProcessingPay(true);
     try {
-      // Simulate network request delay for realistic payment gateway loading
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      await api.subscribePlan(selectedPlan);
-      Alert.alert('Payment Successful', `Successfully processed payment and upgraded to the ${selectedPlan} Plan!`);
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const amount = getPlanPrice(selectedPlan);
+      await api.submitPaymentRequest(selectedPlan, upiTxId, amount);
+      Alert.alert(
+        'Payment Submitted ⏳',
+        `Your payment of ₹${amount} for the ${selectedPlan} Plan has been submitted.\n\nOur admin will verify your UPI Transaction ID and activate your plan shortly. Come back in a few minutes to check.`,
+      );
       setPayModalVisible(false);
-      loadData(); // Reload balances
+      setUpiTxId('');
     } catch (error: any) {
-      Alert.alert('Payment Failed', error.message || 'Payment transaction failed.');
+      Alert.alert('Submission Failed', error.message || 'Could not submit payment. Please try again.');
     } finally {
       setIsProcessingPay(false);
     }
@@ -1202,156 +1256,93 @@ export default function AccountScreen() {
                 </Text>
               </View>
 
-              {/* Payment Method Selector Tabs */}
-              <View style={styles.paymentTabsContainer}>
+              {/* Payment Method Selector Tabs — UPI only */}
+              <View style={[styles.paymentTabsContainer, { justifyContent: 'center' }]}>
                 <TouchableOpacity 
-                  style={[styles.paymentTab, paymentMethod === 'upi' && styles.activePaymentTab]}
-                  onPress={() => setPaymentMethod('upi')}
-                  disabled={isProcessingPay}
+                  style={[styles.paymentTab, styles.activePaymentTab, { flex: 0, paddingHorizontal: 32 }]}
+                  disabled
                 >
-                  <Ionicons name="qr-code-outline" size={18} color={paymentMethod === 'upi' ? Colors.light.primary : Colors.light.textSecondary} />
-                  <Text style={[styles.paymentTabLabel, paymentMethod === 'upi' && styles.activePaymentTabLabel]}>
-                    UPI (0% Fee)
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.paymentTab, paymentMethod === 'card' && styles.activePaymentTab]}
-                  onPress={() => setPaymentMethod('card')}
-                  disabled={isProcessingPay}
-                >
-                  <Ionicons name="card-outline" size={18} color={paymentMethod === 'card' ? Colors.light.primary : Colors.light.textSecondary} />
-                  <Text style={[styles.paymentTabLabel, paymentMethod === 'card' && styles.activePaymentTabLabel]}>
-                    Card Payment
+                  <Ionicons name="qr-code-outline" size={18} color={Colors.light.primary} />
+                  <Text style={[styles.paymentTabLabel, styles.activePaymentTabLabel]}>
+                    UPI Payment (0% Fee)
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {paymentMethod === 'upi' ? (
-                <View style={styles.upiContainer}>
-                  <Text style={styles.upiInstructions}>
-                    Pay securely using any UPI app (GPay, PhonePe, Paytm, BHIM) with **zero transaction fees**.
-                  </Text>
+              {/* UPI Section always shown */}
+              <View style={styles.upiContainer}>
+                <Text style={styles.upiInstructions}>
+                  Pay securely using any UPI app (GPay, PhonePe, Paytm, BHIM) with **zero transaction fees**.
+                </Text>
 
-                  {/* QR Code section */}
-                  <View style={styles.qrCodeContainer}>
-                    <Image 
-                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${selectedPlan ? getPlanPrice(selectedPlan) : 0}&cu=INR&tn=${selectedPlan}%20Upgrade`)}` }} 
-                      style={styles.qrCodeImage} 
-                    />
-                    <Text style={styles.qrCodeSubtext}>Scan this QR code to pay instantly</Text>
-                  </View>
-
-                  {/* Mobile Direct Pay Button */}
-                  {Platform.OS !== 'web' && (
-                    <TouchableOpacity 
-                      style={styles.upiDirectPayBtn}
-                      onPress={handleUpiPayIntent}
-                      disabled={isProcessingPay}
-                    >
-                      <Ionicons name="flash-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-                      <Text style={styles.upiDirectPayBtnText}>Open Installed UPI App</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <Text style={styles.inputLabel}>UPI TRANSACTION ID / UTR (OPTIONAL)</Text>
-                  <TextInput
-                    style={styles.paymentInput}
-                    value={upiTxId}
-                    onChangeText={setUpiTxId}
-                    placeholder="Enter 12-digit transaction Ref No"
-                    placeholderTextColor={Colors.light.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={12}
-                    editable={!isProcessingPay}
+                {/* QR Code section */}
+                <View style={styles.qrCodeContainer}>
+                  <Image 
+                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${merchantUpiId}&pn=${encodeURIComponent(merchantName)}&am=${selectedPlan ? getPlanPrice(selectedPlan) : 0}&cu=INR&tn=${selectedPlan}%20Upgrade`)}` }} 
+                    style={styles.qrCodeImage} 
                   />
+                  <Text style={styles.qrCodeSubtext}>Scan with GPay / PhonePe / Paytm / BHIM</Text>
+                </View>
 
-                  <TouchableOpacity
-                    style={[styles.payNowBtn, { backgroundColor: isProcessingPay ? '#9ca3af' : Colors.light.primary }]}
-                    onPress={handleUpgrade}
+                {/* Mobile Direct Pay Button */}
+                {Platform.OS !== 'web' && (
+                  <TouchableOpacity 
+                    style={styles.upiDirectPayBtn}
+                    onPress={handleUpiPayIntent}
                     disabled={isProcessingPay}
                   >
-                    {isProcessingPay ? (
-                      <View style={styles.payBtnLoadingRow}>
-                        <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.payNowBtnText}>Verifying Payment...</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.payNowBtnText}>I Have Paid - Activate Plan</Text>
-                    )}
+                    <Ionicons name="flash-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.upiDirectPayBtnText}>Open UPI App</Text>
                   </TouchableOpacity>
+                )}
+
+                <View style={{ backgroundColor: '#eff6ff', borderRadius: 8, padding: 10, marginTop: 14, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 12, color: '#1d4ed8', fontWeight: '600', marginBottom: 2 }}>
+                    📲 How to pay:
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#1e40af', lineHeight: 18 }}>
+                    1. Tap "Open UPI App" or scan the QR code{'\n'}
+                    2. Complete payment in your UPI app{'\n'}
+                    3. Come back here and enter the Transaction ID below
+                  </Text>
                 </View>
-              ) : (
-                <View style={styles.cardContainer}>
-                  <Text style={styles.paymentSectionHeader}>Card Details</Text>
 
-                  <Text style={styles.inputLabel}>CARDHOLDER NAME</Text>
-                  <TextInput
-                    style={styles.paymentInput}
-                    value={cardName}
-                    onChangeText={setCardName}
-                    placeholder="Name on card"
-                    placeholderTextColor={Colors.light.textSecondary}
-                    editable={!isProcessingPay}
-                  />
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>UPI TRANSACTION ID / UTR NUMBER *</Text>
+                <Text style={{ fontSize: 11, color: Colors.light.textSecondary, marginBottom: 6, marginHorizontal: 2 }}>
+                  Copy the 12-digit UTR / Ref No from your UPI app after paying.
+                </Text>
+                <TextInput
+                  style={[styles.paymentInput, (!upiTxId || upiTxId.trim().length < 6) && { borderColor: '#e53e3e' }]}
+                  value={upiTxId}
+                  onChangeText={setUpiTxId}
+                  placeholder="Enter 12-digit Transaction Ref No"
+                  placeholderTextColor={Colors.light.textSecondary}
+                  keyboardType="numeric"
+                  maxLength={12}
+                  editable={!isProcessingPay}
+                />
+                {(!upiTxId || upiTxId.trim().length < 6) && (
+                  <Text style={{ fontSize: 11, color: '#e53e3e', marginBottom: 8, marginHorizontal: 2 }}>
+                    ⚠ Transaction ID is required to activate your plan.
+                  </Text>
+                )}
 
-                  <Text style={styles.inputLabel}>CARD NUMBER</Text>
-                  <TextInput
-                    style={styles.paymentInput}
-                    value={cardNumber}
-                    onChangeText={setCardNumber}
-                    placeholder="4111 2222 3333 4444"
-                    placeholderTextColor={Colors.light.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={19}
-                    editable={!isProcessingPay}
-                  />
-
-                  <View style={styles.rowInputs}>
-                    <View style={{ flex: 1, marginRight: 10 }}>
-                      <Text style={styles.inputLabel}>EXPIRY DATE</Text>
-                      <TextInput
-                        style={styles.paymentInput}
-                        value={cardExpiry}
-                        onChangeText={setCardExpiry}
-                        placeholder="MM/YY"
-                        placeholderTextColor={Colors.light.textSecondary}
-                        maxLength={5}
-                        editable={!isProcessingPay}
-                      />
+                <TouchableOpacity
+                  style={[styles.payNowBtn, { backgroundColor: (!upiTxId || upiTxId.trim().length < 6 || isProcessingPay) ? '#9ca3af' : Colors.light.primary }]}
+                  onPress={handleUpgrade}
+                  disabled={isProcessingPay || !upiTxId || upiTxId.trim().length < 6}
+                >
+                  {isProcessingPay ? (
+                    <View style={styles.payBtnLoadingRow}>
+                      <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={styles.payNowBtnText}>Submitting...</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.inputLabel}>CVV</Text>
-                      <TextInput
-                        style={styles.paymentInput}
-                        value={cardCvv}
-                        onChangeText={setCardCvv}
-                        placeholder="123"
-                        placeholderTextColor={Colors.light.textSecondary}
-                        keyboardType="numeric"
-                        maxLength={4}
-                        secureTextEntry
-                        editable={!isProcessingPay}
-                      />
-                    </View>
-                  </View>
+                  ) : (
+                    <Text style={styles.payNowBtnText}>I Have Paid — Submit for Verification</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
 
-                  <TouchableOpacity
-                    style={[styles.payNowBtn, { backgroundColor: isProcessingPay ? '#9ca3af' : Colors.light.primary }]}
-                    onPress={handleUpgrade}
-                    disabled={isProcessingPay || !cardNumber || !cardExpiry || !cardCvv || !cardName}
-                  >
-                    {isProcessingPay ? (
-                      <View style={styles.payBtnLoadingRow}>
-                        <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.payNowBtnText}>Processing Secure Payment...</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.payNowBtnText}>Pay & Activate Plan</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
 
               <Text style={styles.secureNotice}>
                 🔒 Secure SSL encrypted transaction connection.
@@ -2293,53 +2284,69 @@ export default function AccountScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Admin Tabs */}
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: adminActiveTab === 'docs' ? Colors.light.primary : '#f3f4f6',
-                  alignItems: 'center',
-                }}
-                onPress={() => setAdminActiveTab('docs')}
-              >
-                <Text style={{ color: adminActiveTab === 'docs' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
-                  Pending ID Docs ({adminPendingDocs.length})
-                </Text>
-              </TouchableOpacity>
+            {/* Admin Tabs — horizontally scrollable */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingRight: 8 }}>
+                {/* Payments tab — shown first, purple with badge */}
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    paddingVertical: 10, paddingHorizontal: 14,
+                    borderRadius: 10,
+                    backgroundColor: adminActiveTab === 'payments' ? '#7c3aed' : '#f3f4f6',
+                  }}
+                  onPress={() => setAdminActiveTab('payments')}
+                >
+                  {adminPendingPayments.length > 0 && (
+                    <View style={{ backgroundColor: '#ef4444', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{adminPendingPayments.length}</Text>
+                    </View>
+                  )}
+                  <Text style={{ color: adminActiveTab === 'payments' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                    💰 Payments
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: adminActiveTab === 'photos' ? Colors.light.primary : '#f3f4f6',
-                  alignItems: 'center',
-                }}
-                onPress={() => setAdminActiveTab('photos')}
-              >
-                <Text style={{ color: adminActiveTab === 'photos' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
-                  Pending Photos ({adminPendingPhotos.length})
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 10, paddingHorizontal: 14,
+                    borderRadius: 10,
+                    backgroundColor: adminActiveTab === 'docs' ? Colors.light.primary : '#f3f4f6',
+                  }}
+                  onPress={() => setAdminActiveTab('docs')}
+                >
+                  <Text style={{ color: adminActiveTab === 'docs' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                    ID Docs ({adminPendingDocs.length})
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: adminActiveTab === 'users' ? Colors.light.primary : '#f3f4f6',
-                  alignItems: 'center',
-                }}
-                onPress={() => setAdminActiveTab('users')}
-              >
-                <Text style={{ color: adminActiveTab === 'users' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
-                  All Users ({adminUsersList.length})
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 10, paddingHorizontal: 14,
+                    borderRadius: 10,
+                    backgroundColor: adminActiveTab === 'photos' ? Colors.light.primary : '#f3f4f6',
+                  }}
+                  onPress={() => setAdminActiveTab('photos')}
+                >
+                  <Text style={{ color: adminActiveTab === 'photos' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                    Photos ({adminPendingPhotos.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 10, paddingHorizontal: 14,
+                    borderRadius: 10,
+                    backgroundColor: adminActiveTab === 'users' ? Colors.light.primary : '#f3f4f6',
+                  }}
+                  onPress={() => setAdminActiveTab('users')}
+                >
+                  <Text style={{ color: adminActiveTab === 'users' ? '#fff' : Colors.light.text, fontWeight: 'bold', fontSize: 12 }}>
+                    All Users ({adminUsersList.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
 
             {isAdminLoading ? (
               <View style={{ padding: 40, alignItems: 'center' }}>
@@ -2348,6 +2355,73 @@ export default function AccountScreen() {
               </View>
             ) : (
               <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
+                {/* TAB 0: PENDING PAYMENT REQUESTS */}
+                {adminActiveTab === 'payments' && (
+                  <View>
+                    <Text style={styles.faqHeader}>PENDING PAYMENT REQUESTS ({adminPendingPayments.length})</Text>
+                    <View style={{ backgroundColor: '#f5f3ff', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#ddd6fe' }}>
+                      <Text style={{ fontSize: 12, color: '#5b21b6', fontWeight: '600' }}>
+                        💡 Verify each Transaction ID in your UPI app or bank statement before approving.
+                      </Text>
+                    </View>
+                    {adminPendingPayments.length === 0 ? (
+                      <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                        <Ionicons name="checkmark-done-circle-outline" size={44} color="#10b981" />
+                        <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>No Pending Payments!</Text>
+                        <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>All payment requests have been reviewed.</Text>
+                      </View>
+                    ) : (
+                      adminPendingPayments.map((req: any) => (
+                        <View key={req.id} style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 15, fontWeight: 'bold', color: Colors.light.text }}>{req.user_name}</Text>
+                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>{req.user_email}</Text>
+                            </View>
+                            <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                              <Text style={{ color: '#b45309', fontSize: 11, fontWeight: 'bold' }}>⏳ Pending</Text>
+                            </View>
+                          </View>
+
+                          <View style={{ backgroundColor: '#f8fafc', borderRadius: 8, padding: 10, marginBottom: 12, gap: 6 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Plan:</Text>
+                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: Colors.light.primary }}>{req.plan_type} Plan</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Amount:</Text>
+                              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#059669' }}>₹{req.amount}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>UPI TX ID / UTR:</Text>
+                              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1e40af', letterSpacing: 1 }}>{req.upi_tx_id}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Submitted:</Text>
+                              <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{new Date(req.submitted_at).toLocaleString()}</Text>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity
+                              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 11, borderRadius: 8, alignItems: 'center' }}
+                              onPress={() => handleApprovePayment(req.id)}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>✅ Approve & Activate</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 11, borderRadius: 8, alignItems: 'center' }}
+                              onPress={() => handleRejectPayment(req.id)}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>❌ Reject</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                )}
+
                 {/* TAB 1: PENDING ID DOCUMENTS */}
                 {adminActiveTab === 'docs' && (
                   <View>
