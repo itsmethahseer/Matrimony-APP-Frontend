@@ -471,6 +471,11 @@ export const api = {
     return apiRequest<any[]>('GET', '/api/admin/users');
   },
 
+  getAdminUserDetail: (userId: number) => {
+    if (OFFLINE_MODE) return mockApi.getAdminUserDetail(userId);
+    return apiRequest<any>('GET', `/api/admin/user-detail/${userId}`);
+  },
+
   // Google, Phone OTP, and Forgot Password
   googleAuth: async (email: string, google_id: string, name?: string, photo_url?: string) => {
     if (OFFLINE_MODE) return mockApi.googleAuth(email, google_id, name);

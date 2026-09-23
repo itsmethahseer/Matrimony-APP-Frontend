@@ -1849,17 +1849,89 @@ export const mockApi = {
     const db = await getDb();
     return db.users.map((u) => {
       const p = db.profiles.find((prof) => prof.user_id === u.id);
+      const photos = db.photos?.filter((ph: any) => ph.user_id === u.id) || [];
       return {
+        // Account
         id: u.id,
         email: u.email,
-        name: p?.name || 'User',
+        phone_number: (u as any).phone_number || (p as any)?.primary_no || (p as any)?.whatsapp_no || null,
+        primary_no: (p as any)?.primary_no || (u as any).phone_number || null,
+        whatsapp_no: (p as any)?.whatsapp_no || (u as any).phone_number || null,
+        full_address: (p as any)?.full_address || null,
+        about: (p as any)?.about || (p as any)?.profile_description || null,
+        auth_provider: (u as any).auth_provider || 'email',
         is_admin: u.is_admin,
+        is_active: (u as any).is_active !== false,
         membership_status: u.membership_status,
         plan_type: u.plan_type,
+        credits: (u as any).credits || 0,
         id_verification_status: u.id_verification_status,
+        photos_count: photos.length,
+        unapproved_photos_count: photos.filter((ph: any) => !ph.is_approved).length,
+        photos: photos.map((ph: any) => ({
+          id: ph.id,
+          url: ph.url || ph.photo_url,
+          is_main: ph.is_main,
+          is_approved: ph.is_approved,
+        })),
         created_at: u.last_active_at,
+        last_active_at: u.last_active_at,
+        // Profile
+        name: p?.name || 'User',
+        age: p?.age || null,
+        gender: p?.gender || null,
+        marital_status: (p as any)?.marital_status || null,
+        religion: (p as any)?.religion || null,
+        sect: (p as any)?.sect || null,
+        caste: (p as any)?.caste || null,
+        sub_caste: (p as any)?.sub_caste || null,
+        education: (p as any)?.education || null,
+        profession: (p as any)?.profession || null,
+        annual_income: (p as any)?.annual_income || null,
+        present_location: (p as any)?.present_location || null,
+        present_state: (p as any)?.present_state || null,
+        present_country: (p as any)?.present_country || 'India',
+        height: (p as any)?.height || null,
+        language: (p as any)?.language || null,
+        profile_created_for: (p as any)?.profile_created_for || null,
+        differently_abled: (p as any)?.differently_abled || false,
+        family_type: (p as any)?.family_type || null,
+        financial_status: (p as any)?.financial_status || null,
+        body_type: (p as any)?.body_type || null,
+        skin_color: (p as any)?.skin_color || null,
       };
     });
+  },
+
+  // Admin: fetch full profile detail for a specific user (photos + phone)
+  getAdminUserDetail: async (userId: number) => {
+    await delay();
+    const db = await getDb();
+    const user = db.users.find((u) => u.id === userId);
+    const profile = db.profiles.find((p) => p.user_id === userId);
+    if (!user) throw new Error('User not found');
+    const userPhotos = db.photos.filter((ph: any) => ph.user_id === userId);
+    const resolvedPhone = (user as any).phone_number || (profile as any)?.primary_no || (profile as any)?.whatsapp_no || null;
+    return {
+      user_id: userId,
+      phone_number: resolvedPhone,
+      email: user.email,
+      photos: userPhotos.length > 0
+        ? userPhotos.map((ph: any) => ({
+            id: ph.id,
+            url: ph.url || ph.photo_url,
+            is_main: ph.is_main,
+            is_approved: ph.is_approved,
+          }))
+        : ((profile as any)?.photos || []),
+      // Full profile fields for admin
+      name: profile?.name || 'N/A',
+      tagline: (profile as any)?.tagline || null,
+      about: (profile as any)?.about || (profile as any)?.profile_description || null,
+      primary_no: (profile as any)?.primary_no || resolvedPhone,
+      whatsapp_no: (profile as any)?.whatsapp_no || resolvedPhone,
+      full_address: (profile as any)?.full_address || null,
+    };
   },
 
   // Google, OTP & Password Reset

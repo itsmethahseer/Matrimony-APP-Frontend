@@ -74,6 +74,26 @@ export default function AccountScreen() {
   const [adminPendingPayments, setAdminPendingPayments] = useState<any[]>([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
 
+  // Admin User Search & Filter States
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [filterGender, setFilterGender] = useState('');
+  const [filterReligion, setFilterReligion] = useState('');
+  const [filterPlan, setFilterPlan] = useState('');
+  const [filterIdStatus, setFilterIdStatus] = useState('');
+  const [filterMaritalStatus, setFilterMaritalStatus] = useState('');
+  const [filterState, setFilterState] = useState('');
+  const [filterAgeMin, setFilterAgeMin] = useState('');
+  const [filterAgeMax, setFilterAgeMax] = useState('');
+  const [showUserFilters, setShowUserFilters] = useState(false);
+  // Picker dropdown modal: which filter is open + its options
+  const [activeFilterPicker, setActiveFilterPicker] = useState<{ key: string; label: string; options: string[]; onSelect: (v: string) => void } | null>(null);
+  // Admin user profile view (full profile inside admin console)
+  const [adminViewingUser, setAdminViewingUser] = useState<any | null>(null);
+  // Full detail loaded on tap (includes photos array + phone)
+  const [adminViewingUserDetail, setAdminViewingUserDetail] = useState<any | null>(null);
+  const [adminDetailLoading, setAdminDetailLoading] = useState(false);
+  const [adminViewingPhotoModal, setAdminViewingPhotoModal] = useState<string | null>(null);
+
   // Verification form state
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -290,6 +310,22 @@ export default function AccountScreen() {
       Alert.alert('Admin Access', err.message || 'Failed to load admin verification data.');
     } finally {
       setIsAdminLoading(false);
+    }
+  };
+
+  // Load full user detail (photos + phone) when admin taps a user card
+  const loadAdminUserDetail = async (usr: any) => {
+    setAdminViewingUser(usr);
+    setAdminViewingUserDetail(null);
+    setAdminDetailLoading(true);
+    try {
+      const detail = await api.getAdminUserDetail(usr.id);
+      setAdminViewingUserDetail(detail);
+    } catch {
+      // Silently fall back — basic info from usr is still shown
+      setAdminViewingUserDetail(null);
+    } finally {
+      setAdminDetailLoading(false);
     }
   };
 
@@ -2273,7 +2309,9 @@ export default function AccountScreen() {
       {/* Modal 8: Admin Console */}
       <Modal visible={adminModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.bottomSheet, { height: '88%' }]}>
+          {/* Use flex layout so the inner scroll can fill remaining space properly on Android */}
+          <View style={[styles.bottomSheet, { height: '88%', paddingBottom: 0 }]}>
+            {/* Header */}
             <View style={styles.sheetHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="shield-checkmark" size={24} color="#b45309" />
@@ -2284,14 +2322,19 @@ export default function AccountScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Admin Tabs — horizontally scrollable */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              <View style={{ flexDirection: 'row', gap: 8, paddingRight: 8 }}>
-                {/* Payments tab — shown first, purple with badge */}
+            {/* Admin Tabs — fixed 48px height container prevents Android collapse */}
+            <View style={{ height: 48, marginBottom: 12 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingRight: 8, alignItems: 'center' }}
+                style={{ flexGrow: 0 }}
+              >
+                {/* Payments tab — purple with badge */}
                 <TouchableOpacity
                   style={{
                     flexDirection: 'row', alignItems: 'center', gap: 6,
-                    paddingVertical: 10, paddingHorizontal: 14,
+                    paddingVertical: 8, paddingHorizontal: 14,
                     borderRadius: 10,
                     backgroundColor: adminActiveTab === 'payments' ? '#7c3aed' : '#f3f4f6',
                   }}
@@ -2309,7 +2352,7 @@ export default function AccountScreen() {
 
                 <TouchableOpacity
                   style={{
-                    paddingVertical: 10, paddingHorizontal: 14,
+                    paddingVertical: 8, paddingHorizontal: 14,
                     borderRadius: 10,
                     backgroundColor: adminActiveTab === 'docs' ? Colors.light.primary : '#f3f4f6',
                   }}
@@ -2322,7 +2365,7 @@ export default function AccountScreen() {
 
                 <TouchableOpacity
                   style={{
-                    paddingVertical: 10, paddingHorizontal: 14,
+                    paddingVertical: 8, paddingHorizontal: 14,
                     borderRadius: 10,
                     backgroundColor: adminActiveTab === 'photos' ? Colors.light.primary : '#f3f4f6',
                   }}
@@ -2335,7 +2378,7 @@ export default function AccountScreen() {
 
                 <TouchableOpacity
                   style={{
-                    paddingVertical: 10, paddingHorizontal: 14,
+                    paddingVertical: 8, paddingHorizontal: 14,
                     borderRadius: 10,
                     backgroundColor: adminActiveTab === 'users' ? Colors.light.primary : '#f3f4f6',
                   }}
@@ -2345,205 +2388,936 @@ export default function AccountScreen() {
                     All Users ({adminUsersList.length})
                   </Text>
                 </TouchableOpacity>
-              </View>
-            </ScrollView>
+              </ScrollView>
+            </View>
 
-            {isAdminLoading ? (
-              <View style={{ padding: 40, alignItems: 'center' }}>
-                <ActivityIndicator size="large" color={Colors.light.primary} />
-                <Text style={{ marginTop: 10, color: Colors.light.textSecondary }}>Loading admin validation items...</Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
-                {/* TAB 0: PENDING PAYMENT REQUESTS */}
-                {adminActiveTab === 'payments' && (
-                  <View>
-                    <Text style={styles.faqHeader}>PENDING PAYMENT REQUESTS ({adminPendingPayments.length})</Text>
-                    <View style={{ backgroundColor: '#f5f3ff', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#ddd6fe' }}>
-                      <Text style={{ fontSize: 12, color: '#5b21b6', fontWeight: '600' }}>
-                        💡 Verify each Transaction ID in your UPI app or bank statement before approving.
-                      </Text>
+            {/* Content — flex: 1 so scroll fills remaining space precisely */}
+            <View style={{ flex: 1 }}>
+              {isAdminLoading ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={Colors.light.primary} />
+                  <Text style={{ marginTop: 10, color: Colors.light.textSecondary }}>Loading admin validation items...</Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ paddingBottom: 32 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* TAB 0: PENDING PAYMENT REQUESTS */}
+                  {adminActiveTab === 'payments' && (
+                    <View>
+                      <Text style={styles.faqHeader}>PENDING PAYMENT REQUESTS ({adminPendingPayments.length})</Text>
+                      <View style={{ backgroundColor: '#f5f3ff', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#ddd6fe' }}>
+                        <Text style={{ fontSize: 12, color: '#5b21b6', fontWeight: '600' }}>
+                          💡 Verify each Transaction ID in your UPI app or bank statement before approving.
+                        </Text>
+                      </View>
+                      {adminPendingPayments.length === 0 ? (
+                        <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                          <Ionicons name="checkmark-done-circle-outline" size={44} color="#10b981" />
+                          <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>No Pending Payments!</Text>
+                          <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>All payment requests have been reviewed.</Text>
+                        </View>
+                      ) : (
+                        adminPendingPayments.map((req: any) => (
+                          <View key={req.id} style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
+                            {/* Name + badge row — flex:1 on text prevents overflow */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                              <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: Colors.light.text }} numberOfLines={1}>{req.user_name}</Text>
+                                <Text style={{ fontSize: 12, color: Colors.light.textSecondary }} numberOfLines={1}>{req.user_email}</Text>
+                              </View>
+                              <View style={{ flexShrink: 0, backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                                <Text style={{ color: '#b45309', fontSize: 11, fontWeight: 'bold' }}>⏳ Pending</Text>
+                              </View>
+                            </View>
+
+                            {/* Details block */}
+                            <View style={{ backgroundColor: '#f8fafc', borderRadius: 8, padding: 10, marginBottom: 12 }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Plan:</Text>
+                                <Text style={{ fontSize: 12, fontWeight: 'bold', color: Colors.light.primary }}>{req.plan_type} Plan</Text>
+                              </View>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Amount:</Text>
+                                <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#059669' }}>₹{req.amount}</Text>
+                              </View>
+                              {/* UTR stacked vertically to avoid overflow on small screens */}
+                              <View style={{ marginBottom: 4 }}>
+                                <Text style={{ fontSize: 12, color: Colors.light.textSecondary, marginBottom: 2 }}>UPI TX ID / UTR:</Text>
+                                <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#1e40af', letterSpacing: 0.5 }} selectable>{req.upi_tx_id}</Text>
+                              </View>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Submitted:</Text>
+                                <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{new Date(req.submitted_at).toLocaleString()}</Text>
+                              </View>
+                            </View>
+
+                            {/* Action buttons */}
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                              <TouchableOpacity
+                                style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 11, borderRadius: 8, alignItems: 'center' }}
+                                onPress={() => handleApprovePayment(req.id)}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>✅ Approve</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 11, borderRadius: 8, alignItems: 'center' }}
+                                onPress={() => handleRejectPayment(req.id)}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>❌ Reject</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ))
+                      )}
                     </View>
-                    {adminPendingPayments.length === 0 ? (
-                      <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
-                        <Ionicons name="checkmark-done-circle-outline" size={44} color="#10b981" />
-                        <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>No Pending Payments!</Text>
-                        <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>All payment requests have been reviewed.</Text>
-                      </View>
-                    ) : (
-                      adminPendingPayments.map((req: any) => (
-                        <View key={req.id} style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 15, fontWeight: 'bold', color: Colors.light.text }}>{req.user_name}</Text>
-                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>{req.user_email}</Text>
-                            </View>
-                            <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                              <Text style={{ color: '#b45309', fontSize: 11, fontWeight: 'bold' }}>⏳ Pending</Text>
-                            </View>
-                          </View>
+                  )}
 
-                          <View style={{ backgroundColor: '#f8fafc', borderRadius: 8, padding: 10, marginBottom: 12, gap: 6 }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Plan:</Text>
-                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: Colors.light.primary }}>{req.plan_type} Plan</Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Amount:</Text>
-                              <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#059669' }}>₹{req.amount}</Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>UPI TX ID / UTR:</Text>
-                              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1e40af', letterSpacing: 1 }}>{req.upi_tx_id}</Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>Submitted:</Text>
-                              <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{new Date(req.submitted_at).toLocaleString()}</Text>
-                            </View>
-                          </View>
-
-                          <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <TouchableOpacity
-                              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 11, borderRadius: 8, alignItems: 'center' }}
-                              onPress={() => handleApprovePayment(req.id)}
-                            >
-                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>✅ Approve & Activate</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 11, borderRadius: 8, alignItems: 'center' }}
-                              onPress={() => handleRejectPayment(req.id)}
-                            >
-                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>❌ Reject</Text>
-                            </TouchableOpacity>
-                          </View>
+                  {/* TAB 1: PENDING ID DOCUMENTS */}
+                  {adminActiveTab === 'docs' && (
+                    <View>
+                      <Text style={styles.faqHeader}>PENDING USER ID DOCUMENTS ({adminPendingDocs.length})</Text>
+                      {adminPendingDocs.length === 0 ? (
+                        <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                          <Ionicons name="checkmark-done-circle-outline" size={44} color="#10b981" />
+                          <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>All Documents Verified!</Text>
+                          <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>No user ID documents currently pending approval.</Text>
                         </View>
-                      ))
-                    )}
-                  </View>
-                )}
-
-                {/* TAB 1: PENDING ID DOCUMENTS */}
-                {adminActiveTab === 'docs' && (
-                  <View>
-                    <Text style={styles.faqHeader}>PENDING USER ID DOCUMENTS ({adminPendingDocs.length})</Text>
-                    {adminPendingDocs.length === 0 ? (
-                      <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
-                        <Ionicons name="checkmark-done-circle-outline" size={44} color="#10b981" />
-                        <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>All Documents Verified!</Text>
-                        <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4 }}>No user ID documents currently pending approval.</Text>
-                      </View>
-                    ) : (
-                      adminPendingDocs.map((doc: any) => (
-                        <View key={doc.user_id} style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <View>
-                              <Text style={{ fontSize: 15, fontWeight: 'bold', color: Colors.light.text }}>{doc.user_name}</Text>
-                              <Text style={{ fontSize: 12, color: Colors.light.textSecondary }}>{doc.user_email} (ID: #{doc.user_id})</Text>
+                      ) : (
+                        adminPendingDocs.map((doc: any) => (
+                          <View key={doc.user_id} style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                              <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: Colors.light.text }} numberOfLines={1}>{doc.user_name}</Text>
+                                <Text style={{ fontSize: 12, color: Colors.light.textSecondary }} numberOfLines={1}>{doc.user_email} (ID: #{doc.user_id})</Text>
+                              </View>
+                              <View style={{ flexShrink: 0, backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                                <Text style={{ color: '#b45309', fontSize: 11, fontWeight: 'bold' }}>⏳ Pending</Text>
+                              </View>
                             </View>
-                            <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                              <Text style={{ color: '#b45309', fontSize: 11, fontWeight: 'bold' }}>⏳ Pending</Text>
+
+                            {doc.document_url ? (
+                              <Image
+                                source={{ uri: doc.document_url.startsWith('http') ? doc.document_url : `${API_URL}${doc.document_url}` }}
+                                style={{ width: '100%', height: 160, borderRadius: 8, marginVertical: 8 }}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={{ height: 80, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center', borderRadius: 8, marginVertical: 8 }}>
+                                <Text style={{ color: Colors.light.textSecondary }}>No Document URL</Text>
+                              </View>
+                            )}
+
+                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                              <TouchableOpacity
+                                style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                                onPress={() => handleApproveDoc(doc.user_id)}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>✅ Approve ID</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                                onPress={() => handleRejectDoc(doc.user_id)}
+                              >
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>❌ Reject</Text>
+                              </TouchableOpacity>
                             </View>
                           </View>
+                        ))
+                      )}
+                    </View>
+                  )}
 
-                          {doc.document_url ? (
-                            <Image 
-                              source={{ uri: doc.document_url.startsWith('http') ? doc.document_url : `${API_URL}${doc.document_url}` }} 
-                              style={{ width: '100%', height: 160, borderRadius: 8, marginVertical: 8, resizeMode: 'cover' }} 
-                            />
-                          ) : (
-                            <View style={{ height: 80, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center', borderRadius: 8, marginVertical: 8 }}>
-                              <Text style={{ color: Colors.light.textSecondary }}>No Document URL</Text>
+                  {/* TAB 2: PENDING PROFILE PHOTOS */}
+                  {/* Explicit row pairs instead of flexWrap — avoids Android ScrollView height bug */}
+                  {adminActiveTab === 'photos' && (
+                    <View>
+                      <Text style={styles.faqHeader}>PENDING PROFILE PHOTOS ({adminPendingPhotos.length})</Text>
+                      {adminPendingPhotos.length === 0 ? (
+                        <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                          <Ionicons name="images-outline" size={44} color="#10b981" />
+                          <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>All Photos Approved!</Text>
+                          <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>No user profile photos currently pending validation.</Text>
+                        </View>
+                      ) : (
+                        (() => {
+                          const photoRows: any[][] = [];
+                          for (let i = 0; i < adminPendingPhotos.length; i += 2) {
+                            photoRows.push(adminPendingPhotos.slice(i, i + 2));
+                          }
+                          return photoRows.map((row, rowIdx) => (
+                            <View key={rowIdx} style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                              {row.map((photo: any) => (
+                                <View key={photo.photo_id} style={{ flex: 1, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
+                                  <Image
+                                    source={{ uri: photo.photo_url ? (photo.photo_url.startsWith('http') ? photo.photo_url : `${API_URL}${photo.photo_url}`) : undefined }}
+                                    style={{ width: '100%', height: 140 }}
+                                    resizeMode="cover"
+                                  />
+                                  <View style={{ padding: 8 }}>
+                                    <Text style={{ fontWeight: 'bold', fontSize: 13, color: Colors.light.text, marginBottom: 2 }} numberOfLines={1}>{photo.user_name}</Text>
+                                    <Text style={{ fontSize: 10, color: Colors.light.textSecondary, marginBottom: 6 }} numberOfLines={1}>{photo.user_email}</Text>
+                                    <TouchableOpacity
+                                      style={{ backgroundColor: '#10b981', paddingVertical: 7, borderRadius: 6, alignItems: 'center', marginBottom: 4 }}
+                                      onPress={() => handleApprovePhoto(photo.photo_id)}
+                                    >
+                                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>✅ Approve</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      style={{ backgroundColor: '#ef4444', paddingVertical: 7, borderRadius: 6, alignItems: 'center' }}
+                                      onPress={() => handleRejectPhoto(photo.photo_id)}
+                                    >
+                                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>❌ Reject</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                </View>
+                              ))}
+                              {/* Spacer for odd-count last row */}
+                              {row.length === 1 && <View style={{ flex: 1 }} />}
                             </View>
+                          ));
+                        })()
+                      )}
+                    </View>
+                  )}
+
+                  {/* TAB 3: ALL USERS DIRECTORY — Full Search & Filter */}
+                  {adminActiveTab === 'users' && (() => {
+                    // ---- client-side filtering (all instant, no network) ----
+                    const q = userSearchQuery.toLowerCase().trim();
+                    const filteredUsers = adminUsersList.filter((usr: any) => {
+                      // Text search across all key fields
+                      if (q) {
+                        const haystack = [
+                          usr.name, usr.email, usr.phone_number,
+                          usr.profession, usr.education,
+                          usr.present_location, usr.present_state, usr.present_country,
+                          usr.religion, usr.sect, usr.caste, usr.sub_caste,
+                          usr.language, usr.plan_type, usr.id_verification_status,
+                          usr.marital_status, usr.financial_status,
+                          usr.age ? String(usr.age) : '',
+                        ].join(' ').toLowerCase();
+                        if (!haystack.includes(q)) return false;
+                      }
+                      // Dropdown filters
+                      if (filterGender && usr.gender !== filterGender) return false;
+                      if (filterReligion && usr.religion !== filterReligion) return false;
+                      if (filterPlan && (usr.plan_type || 'Free') !== filterPlan) return false;
+                      if (filterIdStatus && usr.id_verification_status !== filterIdStatus) return false;
+                      if (filterMaritalStatus && usr.marital_status !== filterMaritalStatus) return false;
+                      if (filterState && !(usr.present_state || '').toLowerCase().includes(filterState.toLowerCase())) return false;
+                      if (filterAgeMin && (usr.age || 0) < parseInt(filterAgeMin)) return false;
+                      if (filterAgeMax && (usr.age || 999) > parseInt(filterAgeMax)) return false;
+                      return true;
+                    });
+
+                    const activeFilterCount = [filterGender, filterReligion, filterPlan, filterIdStatus, filterMaritalStatus, filterState, filterAgeMin, filterAgeMax].filter(Boolean).length;
+
+                    const clearAllFilters = () => {
+                      setUserSearchQuery('');
+                      setFilterGender('');
+                      setFilterReligion('');
+                      setFilterPlan('');
+                      setFilterIdStatus('');
+                      setFilterMaritalStatus('');
+                      setFilterState('');
+                      setFilterAgeMin('');
+                      setFilterAgeMax('');
+                    };
+
+                    // FilterChip: tapping opens a proper picker modal (not cycling)
+                    const FilterChip = ({ label, value, options, onSelect }: { label: string; value: string; options: string[]; onSelect: (v: string) => void }) => (
+                      <TouchableOpacity
+                        onPress={() => setActiveFilterPicker({ key: label, label, options: options.filter(o => o !== ''), onSelect })}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 4,
+                          paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20,
+                          backgroundColor: value ? Colors.light.primary : '#f1f5f9',
+                          borderWidth: 1, borderColor: value ? Colors.light.primary : '#cbd5e1',
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: value ? '#fff' : Colors.light.textSecondary }}>
+                          {value || label}
+                        </Text>
+                        {value ? (
+                          <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onSelect(''); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                            <Ionicons name="close-circle" size={14} color="#fff" />
+                          </TouchableOpacity>
+                        ) : (
+                          <Ionicons name="chevron-down" size={11} color={Colors.light.textSecondary} />
+                        )}
+                      </TouchableOpacity>
+                    );
+
+                    return (
+                      <View>
+                        {/* Header row */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                          <Text style={styles.faqHeader}>
+                            REGISTERED ACCOUNTS{'\n'}
+                            <Text style={{ fontSize: 12, color: Colors.light.textSecondary, fontWeight: '400' }}>
+                              {filteredUsers.length} of {adminUsersList.length} shown
+                            </Text>
+                          </Text>
+                          {(activeFilterCount > 0 || userSearchQuery) && (
+                            <TouchableOpacity
+                              onPress={clearAllFilters}
+                              style={{ backgroundColor: '#fef2f2', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}
+                            >
+                              <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '700' }}>✕ Clear All</Text>
+                            </TouchableOpacity>
                           )}
+                        </View>
 
-                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-                            <TouchableOpacity
-                              style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
-                              onPress={() => handleApproveDoc(doc.user_id)}
-                            >
-                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Approve ID Document</Text>
+                        {/* Search bar */}
+                        <View style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 8,
+                          backgroundColor: '#f8fafc', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+                          borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 10,
+                        }}>
+                          <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
+                          <TextInput
+                            style={{ flex: 1, fontSize: 14, color: Colors.light.text }}
+                            placeholder="Search name, email, age, location, religion…"
+                            placeholderTextColor={Colors.light.textSecondary}
+                            value={userSearchQuery}
+                            onChangeText={setUserSearchQuery}
+                            returnKeyType="search"
+                            autoCapitalize="none"
+                          />
+                          {userSearchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setUserSearchQuery('')}>
+                              <Ionicons name="close-circle" size={18} color={Colors.light.textSecondary} />
                             </TouchableOpacity>
+                          )}
+                        </View>
 
+                        {/* Filter toggle button */}
+                        <TouchableOpacity
+                          onPress={() => setShowUserFilters(!showUserFilters)}
+                          style={{
+                            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                            backgroundColor: showUserFilters ? '#f0f9ff' : '#f8fafc',
+                            borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9,
+                            borderWidth: 1, borderColor: showUserFilters ? '#bae6fd' : '#e2e8f0',
+                            marginBottom: showUserFilters ? 10 : 12,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="options" size={16} color={showUserFilters ? '#0284c7' : Colors.light.textSecondary} />
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: showUserFilters ? '#0284c7' : Colors.light.text }}>
+                              Filters {activeFilterCount > 0 ? `(${activeFilterCount} active)` : ''}
+                            </Text>
+                          </View>
+                          <Ionicons name={showUserFilters ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.light.textSecondary} />
+                        </TouchableOpacity>
+
+                        {/* Filter panel */}
+                        {showUserFilters && (
+                          <View style={{ backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                            {/* Row 1: Gender, Plan, ID Status */}
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.light.textSecondary, marginBottom: 6, letterSpacing: 0.5 }}>ACCOUNT & PLAN</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                              <FilterChip label="Gender" value={filterGender} options={['', 'Male', 'Female']} onSelect={setFilterGender} />
+                              <FilterChip label="Plan" value={filterPlan} options={['', 'Free', 'Silver', 'Gold', 'Platinum']} onSelect={setFilterPlan} />
+                              <FilterChip label="ID Status" value={filterIdStatus} options={['', 'Unverified', 'Pending', 'Verified', 'Rejected']} onSelect={setFilterIdStatus} />
+                            </View>
+
+                            {/* Row 2: Marital Status, Religion */}
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.light.textSecondary, marginBottom: 6, letterSpacing: 0.5 }}>PROFILE</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                              <FilterChip label="Marital Status" value={filterMaritalStatus} options={['', 'Never Married', 'Divorced', 'Widowed', 'Awaiting Divorce']} onSelect={setFilterMaritalStatus} />
+                              <FilterChip label="Religion" value={filterReligion} options={['', 'Islam', 'Hinduism', 'Christianity', 'Sikhism', 'Buddhism', 'Jainism', 'Other']} onSelect={setFilterReligion} />
+                            </View>
+
+                            {/* Row 3: State + Age Range */}
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.light.textSecondary, marginBottom: 6, letterSpacing: 0.5 }}>LOCATION & AGE</Text>
+                            <View style={{ gap: 8 }}>
+                              <View style={{
+                                flexDirection: 'row', alignItems: 'center', gap: 8,
+                                backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                                borderWidth: 1, borderColor: '#e2e8f0',
+                              }}>
+                                <Ionicons name="location-outline" size={14} color={Colors.light.textSecondary} />
+                                <TextInput
+                                  style={{ flex: 1, fontSize: 13, color: Colors.light.text }}
+                                  placeholder="Filter by state / city…"
+                                  placeholderTextColor={Colors.light.textSecondary}
+                                  value={filterState}
+                                  onChangeText={setFilterState}
+                                  autoCapitalize="words"
+                                />
+                                {filterState.length > 0 && (
+                                  <TouchableOpacity onPress={() => setFilterState('')}>
+                                    <Ionicons name="close-circle" size={15} color={Colors.light.textSecondary} />
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                              <View style={{ flexDirection: 'row', gap: 8 }}>
+                                <View style={{
+                                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+                                  backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                                  borderWidth: 1, borderColor: '#e2e8f0',
+                                }}>
+                                  <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>Age ≥</Text>
+                                  <TextInput
+                                    style={{ flex: 1, fontSize: 13, color: Colors.light.text }}
+                                    placeholder="18"
+                                    placeholderTextColor={Colors.light.textSecondary}
+                                    value={filterAgeMin}
+                                    onChangeText={setFilterAgeMin}
+                                    keyboardType="numeric"
+                                    maxLength={3}
+                                  />
+                                </View>
+                                <View style={{
+                                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+                                  backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+                                  borderWidth: 1, borderColor: '#e2e8f0',
+                                }}>
+                                  <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>Age ≤</Text>
+                                  <TextInput
+                                    style={{ flex: 1, fontSize: 13, color: Colors.light.text }}
+                                    placeholder="70"
+                                    placeholderTextColor={Colors.light.textSecondary}
+                                    value={filterAgeMax}
+                                    onChangeText={setFilterAgeMax}
+                                    keyboardType="numeric"
+                                    maxLength={3}
+                                  />
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        )}
+
+                        {/* Active filter chips summary */}
+                        {activeFilterCount > 0 && (
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+                            <View style={{ flexDirection: 'row', gap: 6, paddingRight: 8 }}>
+                              {filterGender && <View style={{ backgroundColor: '#e0f2fe', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#0369a1' }}>♂♀ {filterGender}</Text></View>}
+                              {filterReligion && <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#15803d' }}>🕌 {filterReligion}</Text></View>}
+                              {filterPlan && <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#92400e' }}>💎 {filterPlan}</Text></View>}
+                              {filterIdStatus && <View style={{ backgroundColor: '#fdf4ff', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#7e22ce' }}>🪪 {filterIdStatus}</Text></View>}
+                              {filterMaritalStatus && <View style={{ backgroundColor: '#fef2f2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#b91c1c' }}>💍 {filterMaritalStatus}</Text></View>}
+                              {filterState && <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#065f46' }}>📍 {filterState}</Text></View>}
+                              {(filterAgeMin || filterAgeMax) && <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}><Text style={{ fontSize: 11, color: '#334155' }}>🎂 {filterAgeMin || '18'}–{filterAgeMax || '70'}</Text></View>}
+                            </View>
+                          </ScrollView>
+                        )}
+
+                        {/* No results */}
+                        {filteredUsers.length === 0 && (
+                          <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
+                            <Ionicons name="search-outline" size={44} color="#9ca3af" />
+                            <Text style={{ fontWeight: 'bold', marginTop: 8, color: Colors.light.text }}>No users found</Text>
+                            <Text style={{ fontSize: 12, color: Colors.light.textSecondary, marginTop: 4, textAlign: 'center' }}>
+                              Try different search terms or clear some filters.
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* User cards */}
+                        {filteredUsers.map((usr: any) => (
+                          <TouchableOpacity
+                            key={usr.id}
+                            activeOpacity={0.8}
+                            onPress={() => loadAdminUserDetail(usr)}
+                            style={{ backgroundColor: '#fff', padding: 12, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#e5e7eb', elevation: 1 }}
+                          >
+                            {/* Top: name + open-profile button */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                              <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontWeight: 'bold', fontSize: 15, color: Colors.light.text }} numberOfLines={1}>
+                                  {usr.name}{usr.is_admin ? ' 👑' : ''}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: Colors.light.textSecondary, marginTop: 1 }} numberOfLines={1}>{usr.email}</Text>
+                                {(usr.phone_number || usr.primary_no) && (
+                                  <Text style={{ fontSize: 11, color: '#059669', fontWeight: '600', marginTop: 2 }} numberOfLines={1}>
+                                    📞 {usr.phone_number || usr.primary_no}
+                                  </Text>
+                                )}
+                              </View>
+                              <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
+                                <Text style={{ fontSize: 11, color: '#059669', fontWeight: 'bold' }}>{usr.photos_count || 0} Photos</Text>
+                                {(usr.unapproved_photos_count || 0) > 0 && (
+                                  <Text style={{ fontSize: 10, color: '#d97706', fontWeight: 'bold' }}>{usr.unapproved_photos_count} Pending</Text>
+                                )}
+                              </View>
+                            </View>
+
+                            {/* Key profile info — compact grid */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginVertical: 6 }}>
+                              {usr.age && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>🎂 {usr.age} yrs</Text>}
+                              {usr.gender && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>  •  {usr.gender}</Text>}
+                              {usr.marital_status && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>  •  {usr.marital_status}</Text>}
+                              {(usr.present_location || usr.present_state) && (
+                                <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>
+                                  {'  '}📍 {[usr.present_location, usr.present_state].filter(Boolean).join(', ')}
+                                </Text>
+                              )}
+                              {(usr.religion || usr.caste) && (
+                                <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>
+                                  {'  '}🕌 {[usr.religion, usr.caste].filter(Boolean).join(' / ')}
+                                </Text>
+                              )}
+                              {usr.profession && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{'  '}💼 {usr.profession}</Text>}
+                              {usr.education && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{'  '}🎓 {usr.education}</Text>}
+                              {usr.annual_income && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{'  '}₹{(usr.annual_income / 100000).toFixed(1)}L/yr</Text>}
+                              {usr.height && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{'  '}📏 {usr.height}cm</Text>}
+                              {usr.language && <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{'  '}🗣 {usr.language}</Text>}
+                            </View>
+
+                            {/* Status chips */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+                              <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                                <Text style={{ fontSize: 10, color: Colors.light.primary, fontWeight: '600' }}>💎 {usr.plan_type || 'Free'}</Text>
+                              </View>
+                              <View style={{
+                                paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
+                                backgroundColor: usr.id_verification_status === 'Verified' ? '#f0fdf4' : usr.id_verification_status === 'Pending' ? '#fef3c7' : '#fef2f2',
+                              }}>
+                                <Text style={{
+                                  fontSize: 10, fontWeight: '600',
+                                  color: usr.id_verification_status === 'Verified' ? '#059669' : usr.id_verification_status === 'Pending' ? '#b45309' : '#dc2626',
+                                }}>
+                                  🪪 {usr.id_verification_status}
+                                </Text>
+                              </View>
+                              {usr.membership_status && usr.membership_status !== 'Free' && (
+                                <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                                  <Text style={{ fontSize: 10, color: '#92400e', fontWeight: '600' }}>⭐ {usr.membership_status}</Text>
+                                </View>
+                              )}
+                              {!usr.is_active && (
+                                <View style={{ backgroundColor: '#fef2f2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                                  <Text style={{ fontSize: 10, color: '#dc2626', fontWeight: '600' }}>⛔ Inactive</Text>
+                                </View>
+                              )}
+                              {usr.differently_abled && (
+                                <View style={{ backgroundColor: '#f0f9ff', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                                  <Text style={{ fontSize: 10, color: '#0369a1', fontWeight: '600' }}>♿ Diff. Abled</Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* Joined date + tap hint */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                              {usr.created_at ? (
+                                <Text style={{ fontSize: 10, color: Colors.light.textSecondary }}>
+                                  Joined: {new Date(usr.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </Text>
+                              ) : <View />}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                <Text style={{ fontSize: 10, color: Colors.light.primary, fontWeight: '600' }}>View Profile</Text>
+                                <Ionicons name="chevron-forward" size={11} color={Colors.light.primary} />
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    );
+                  })()}
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+
+      {/* Filter Picker Modal — shared dropdown for all filter chips */}
+      <Modal
+        visible={activeFilterPicker !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActiveFilterPicker(null)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => setActiveFilterPicker(null)}
+        >
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '80%', maxHeight: '60%', overflow: 'hidden' }}>
+            {/* Picker header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+              <Text style={{ fontWeight: 'bold', fontSize: 16, color: Colors.light.text }}>{activeFilterPicker?.label || 'Select'}</Text>
+              <TouchableOpacity onPress={() => setActiveFilterPicker(null)}>
+                <Ionicons name="close" size={22} color={Colors.light.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {/* Clear option */}
+            <TouchableOpacity
+              onPress={() => { activeFilterPicker?.onSelect(''); setActiveFilterPicker(null); }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#f8fafc' }}
+            >
+              <Ionicons name="close-circle-outline" size={18} color="#9ca3af" />
+              <Text style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>Clear filter</Text>
+            </TouchableOpacity>
+            {/* Options list */}
+            <ScrollView bounces={false}>
+              {(activeFilterPicker?.options || []).map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => { activeFilterPicker?.onSelect(opt); setActiveFilterPicker(null); }}
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f8fafc' }}
+                >
+                  <Text style={{ fontSize: 14, color: Colors.light.text }}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Admin User Profile View Modal */}
+      <Modal
+        visible={adminViewingUser !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAdminViewingUser(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.bottomSheet, { height: '92%', paddingBottom: 0 }]}>
+            {/* Header */}
+            <View style={[styles.sheetHeader, { marginBottom: 0, paddingBottom: 14 }]}>
+              <TouchableOpacity onPress={() => { setAdminViewingUser(null); setAdminViewingUserDetail(null); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="arrow-back" size={22} color={Colors.light.primary} />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.light.primary }}>Back to Users</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setAdminViewingUser(null); setAdminViewingUserDetail(null); }}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            {adminViewingUser && (() => {
+              const userObj = { ...adminViewingUser, ...(adminViewingUserDetail || {}) };
+              const userPhotos: any[] = (adminViewingUserDetail?.photos && adminViewingUserDetail.photos.length > 0)
+                ? adminViewingUserDetail.photos
+                : (adminViewingUser.photos || []);
+              const mainPhoto = userPhotos.find((p: any) => p.is_main) || userPhotos[0];
+              const phone = userObj.primary_no || userObj.phone_number;
+              const whatsapp = userObj.whatsapp_no || phone;
+              const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+              const cleanWhatsApp = (whatsapp || '').replace(/[^0-9]/g, '');
+
+              return (
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingTop: 4 }} showsVerticalScrollIndicator={false}>
+                  {/* Profile hero */}
+                  <View style={{ alignItems: 'center', paddingVertical: 18, backgroundColor: '#f8fafc', borderRadius: 16, marginBottom: 14, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                    {mainPhoto?.url ? (
+                      <TouchableOpacity onPress={() => {
+                        const uri = mainPhoto.url.startsWith('http') ? mainPhoto.url : `${API_URL}${mainPhoto.url}`;
+                        setAdminViewingPhotoModal(uri);
+                      }}>
+                        <Image
+                          source={{ uri: mainPhoto.url.startsWith('http') ? mainPhoto.url : `${API_URL}${mainPhoto.url}` }}
+                          style={{ width: 88, height: 88, borderRadius: 44, borderWidth: 3, borderColor: Colors.light.primary, marginBottom: 10 }}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: Colors.light.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                        <Text style={{ fontSize: 32, color: '#fff', fontWeight: 'bold' }}>
+                          {(userObj.name || 'U').charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={{ fontSize: 20, fontWeight: 'bold', color: Colors.light.text }}>{userObj.name}{userObj.is_admin ? ' 👑' : ''}</Text>
+                    {userObj.age && userObj.gender && (
+                      <Text style={{ fontSize: 13, color: Colors.light.textSecondary, marginTop: 2 }}>
+                        {userObj.age} yrs • {userObj.gender} {userObj.marital_status ? `• ${userObj.marital_status}` : ''}
+                      </Text>
+                    )}
+                    {userObj.tagline && (
+                      <Text style={{ fontSize: 12, fontStyle: 'italic', color: Colors.light.textSecondary, marginTop: 4, textAlign: 'center', paddingHorizontal: 16 }}>
+                        "{userObj.tagline}"
+                      </Text>
+                    )}
+
+                    {/* Status chips row */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 10 }}>
+                      <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.light.primary }}>💎 {userObj.plan_type || 'Free'}</Text>
+                      </View>
+                      <View style={{
+                        paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                        backgroundColor: userObj.id_verification_status === 'Verified' ? '#f0fdf4' : userObj.id_verification_status === 'Pending' ? '#fef3c7' : '#fef2f2',
+                      }}>
+                        <Text style={{
+                          fontSize: 11, fontWeight: '700',
+                          color: userObj.id_verification_status === 'Verified' ? '#059669' : userObj.id_verification_status === 'Pending' ? '#b45309' : '#dc2626',
+                        }}>🪪 {userObj.id_verification_status}</Text>
+                      </View>
+                      {!userObj.is_active && (
+                        <View style={{ backgroundColor: '#fef2f2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#dc2626' }}>⛔ Inactive</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* 📞 PROMINENT CONTACT INFORMATION (CRITICAL FOR ADMIN) */}
+                  <View style={{
+                    backgroundColor: '#fff',
+                    borderRadius: 14,
+                    padding: 16,
+                    marginBottom: 14,
+                    borderWidth: 1.5,
+                    borderColor: '#10b981',
+                    elevation: 2,
+                    shadowColor: '#10b981',
+                    shadowOpacity: 0.1,
+                    shadowOffset: { width: 0, height: 2 },
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#ecfdf5', paddingBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="call" size={18} color="#059669" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#065f46', letterSpacing: 0.5 }}>
+                          CONTACT DETAILS (ADMIN ACCESS)
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: '#d1fae5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#047857' }}>ADMIN ONLY</Text>
+                      </View>
+                    </View>
+
+                    {/* Primary Mobile */}
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.light.textSecondary, marginBottom: 2 }}>PRIMARY MOBILE / PHONE</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: Colors.light.text }}>
+                          {phone || 'Not provided'}
+                        </Text>
+                        {phone && (
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
                             <TouchableOpacity
-                              style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
-                              onPress={() => handleRejectDoc(doc.user_id)}
+                              onPress={() => Linking.openURL(`tel:${cleanPhone}`)}
+                              style={{ backgroundColor: '#059669', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
                             >
-                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Reject Document</Text>
+                              <Ionicons name="call-outline" size={13} color="#fff" />
+                              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Call</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => Linking.openURL(`https://wa.me/${cleanPhone}`)}
+                              style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                            >
+                              <Ionicons name="logo-whatsapp" size={13} color="#fff" />
+                              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>WhatsApp</Text>
                             </TouchableOpacity>
                           </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* WhatsApp if different */}
+                    {whatsapp && whatsapp !== phone && (
+                      <View style={{ marginBottom: 12, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 8 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.light.textSecondary, marginBottom: 2 }}>WHATSAPP NUMBER</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.light.text }}>{whatsapp}</Text>
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(`https://wa.me/${cleanWhatsApp}`)}
+                            style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}
+                          >
+                            <Ionicons name="logo-whatsapp" size={13} color="#fff" />
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Chat</Text>
+                          </TouchableOpacity>
                         </View>
-                      ))
+                      </View>
+                    )}
+
+                    {/* Email */}
+                    <View style={{ borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.light.textSecondary, marginBottom: 2 }}>EMAIL ADDRESS</Text>
+                        <Text style={{ fontSize: 13, color: Colors.light.text, fontWeight: '500' }}>{userObj.email || 'N/A'}</Text>
+                      </View>
+                      {userObj.email && (
+                        <TouchableOpacity
+                          onPress={() => Linking.openURL(`mailto:${userObj.email}`)}
+                          style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' }}
+                        >
+                          <Text style={{ color: Colors.light.text, fontSize: 11, fontWeight: '600' }}>✉️ Email</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Full Address if available */}
+                    {userObj.full_address && (
+                      <View style={{ borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 8, marginTop: 8 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.light.textSecondary, marginBottom: 2 }}>FULL ADDRESS</Text>
+                        <Text style={{ fontSize: 12, color: Colors.light.text }}>{userObj.full_address}</Text>
+                      </View>
                     )}
                   </View>
-                )}
 
-                {/* TAB 2: PENDING PROFILE PHOTOS */}
-                {adminActiveTab === 'photos' && (
-                  <View>
-                    <Text style={styles.faqHeader}>PENDING PROFILE PHOTOS ({adminPendingPhotos.length})</Text>
-                    {adminPendingPhotos.length === 0 ? (
-                      <View style={{ padding: 30, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, marginVertical: 10 }}>
-                        <Ionicons name="images-outline" size={44} color="#10b981" />
-                        <Text style={{ color: '#059669', fontWeight: 'bold', marginTop: 8 }}>All Photos Approved!</Text>
-                        <Text style={{ color: Colors.light.textSecondary, fontSize: 12, marginTop: 4 }}>No user profile photos currently pending validation.</Text>
+                  {/* 📸 USER PHOTOS SECTION */}
+                  <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="images" size={17} color={Colors.light.primary} />
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.light.textSecondary, letterSpacing: 0.5 }}>
+                          USER PHOTOS ({userPhotos.length})
+                        </Text>
+                      </View>
+                      {adminDetailLoading && (
+                        <ActivityIndicator size="small" color={Colors.light.primary} />
+                      )}
+                    </View>
+
+                    {userPhotos.length === 0 ? (
+                      <View style={{ padding: 16, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 10 }}>
+                        <Ionicons name="image-outline" size={32} color="#9ca3af" />
+                        <Text style={{ fontSize: 12, color: Colors.light.textSecondary, marginTop: 4 }}>No photos uploaded by this user.</Text>
                       </View>
                     ) : (
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                        {adminPendingPhotos.map((photo: any) => (
-                          <View key={photo.photo_id} style={{ width: '47%', backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', elevation: 2 }}>
-                            <Image source={{ uri: photo.photo_url }} style={{ width: '100%', height: 160, resizeMode: 'cover' }} />
-                            <View style={{ padding: 8, gap: 6 }}>
-                              <Text style={{ fontWeight: 'bold', fontSize: 13, color: Colors.light.text }} numberOfLines={1}>{photo.user_name}</Text>
-                              <Text style={{ fontSize: 10, color: Colors.light.textSecondary }} numberOfLines={1}>{photo.user_email}</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                        {userPhotos.map((photo: any, index: number) => {
+                          const uri = photo.url ? (photo.url.startsWith('http') ? photo.url : `${API_URL}${photo.url}`) : null;
+                          return (
+                            <TouchableOpacity
+                              key={photo.id || index}
+                              activeOpacity={0.8}
+                              onPress={() => uri && setAdminViewingPhotoModal(uri)}
+                              style={{ width: 110, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f3f4f6' }}
+                            >
+                              {uri ? (
+                                <Image
+                                  source={{ uri }}
+                                  style={{ width: 110, height: 130 }}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                <View style={{ width: 110, height: 130, justifyContent: 'center', alignItems: 'center' }}>
+                                  <Ionicons name="image-outline" size={28} color="#9ca3af" />
+                                </View>
+                              )}
+                              <View style={{ padding: 4, backgroundColor: '#fff' }}>
+                                {photo.is_main && (
+                                  <Text style={{ fontSize: 9, fontWeight: 'bold', color: Colors.light.primary, textAlign: 'center' }}>👑 Main</Text>
+                                )}
+                                <Text style={{
+                                  fontSize: 9,
+                                  fontWeight: '600',
+                                  textAlign: 'center',
+                                  color: photo.is_approved ? '#059669' : '#d97706',
+                                }}>
+                                  {photo.is_approved ? '✅ Approved' : '⏳ Pending'}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    )}
+                  </View>
 
-                              <TouchableOpacity
-                                style={{ backgroundColor: '#10b981', paddingVertical: 8, borderRadius: 6, alignItems: 'center', marginTop: 4 }}
-                                onPress={() => handleApprovePhoto(photo.photo_id)}
-                              >
-                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Approve Photo</Text>
-                              </TouchableOpacity>
+                  {/* ABOUT ME */}
+                  {userObj.about && (
+                    <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.light.textSecondary, letterSpacing: 0.5, marginBottom: 6 }}>ABOUT ME</Text>
+                      <Text style={{ fontSize: 13, color: Colors.light.text, lineHeight: 19 }}>{userObj.about}</Text>
+                    </View>
+                  )}
 
-                              <TouchableOpacity
-                                style={{ backgroundColor: '#ef4444', paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}
-                                onPress={() => handleRejectPhoto(photo.photo_id)}
-                              >
-                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Reject & Remove</Text>
-                              </TouchableOpacity>
-                            </View>
+                  {/* Section helper */}
+                  {[
+                    {
+                      title: '📋 BASIC DETAILS',
+                      fields: [
+                        ['Marital Status', userObj.marital_status],
+                        ['Religion', userObj.religion],
+                        ['Sect / Caste', [userObj.sect, userObj.caste].filter(Boolean).join(' / ')],
+                        ['Sub Caste', userObj.sub_caste],
+                        ['Language', userObj.language],
+                        ['Profile Created For', userObj.profile_created_for],
+                        ['Height', userObj.height ? `${userObj.height} cm` : null],
+                        ['Body Type', userObj.body_type],
+                        ['Skin Color', userObj.skin_color],
+                        ['Differently Abled', userObj.differently_abled ? 'Yes' : null],
+                      ].filter(([, v]) => v),
+                    },
+                    {
+                      title: '📍 LOCATION',
+                      fields: [
+                        ['City / Location', userObj.present_location],
+                        ['State', userObj.present_state],
+                        ['Country', userObj.present_country],
+                        ['Financial Status', userObj.financial_status],
+                        ['Family Type', userObj.family_type],
+                      ].filter(([, v]) => v),
+                    },
+                    {
+                      title: '🎓 EDUCATION & CAREER',
+                      fields: [
+                        ['Education', userObj.education],
+                        ['Profession', userObj.profession],
+                        ['Annual Income', userObj.annual_income ? `₹${(userObj.annual_income / 100000).toFixed(1)} Lakhs` : null],
+                      ].filter(([, v]) => v),
+                    },
+                    {
+                      title: '🏦 ACCOUNT',
+                      fields: [
+                        ['User ID', `#${userObj.id}`],
+                        ['Phone', phone],
+                        ['Auth Provider', userObj.auth_provider],
+                        ['Membership', userObj.membership_status],
+                        ['Credits', userObj.credits != null ? String(userObj.credits) : null],
+                        ['Photos', `${userPhotos.length || userObj.photos_count || 0} total`],
+                        ['Joined', userObj.created_at ? new Date(userObj.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : null],
+                      ].filter(([, v]) => v),
+                    },
+                  ].map((section) => (
+                    section.fields.length > 0 && (
+                      <View key={section.title} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: Colors.light.textSecondary, letterSpacing: 0.5, marginBottom: 10 }}>{section.title}</Text>
+                        {section.fields.map(([label, value]: any) => (
+                          <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f8fafc' }}>
+                            <Text style={{ fontSize: 13, color: Colors.light.textSecondary, flex: 1 }}>{label}</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.light.text, flex: 1, textAlign: 'right' }} numberOfLines={2}>{value}</Text>
                           </View>
                         ))}
                       </View>
-                    )}
-                  </View>
-                )}
-
-                {/* TAB 3: ALL USERS DIRECTORY */}
-                {adminActiveTab === 'users' && (
-                  <View>
-                    <Text style={styles.faqHeader}>REGISTERED ACCOUNTS ({adminUsersList.length})</Text>
-                    {adminUsersList.map((usr: any) => (
-                      <View key={usr.id} style={{ backgroundColor: '#fff', padding: 12, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#eee', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontWeight: 'bold', fontSize: 14, color: Colors.light.text }}>{usr.name} {usr.is_admin ? '👑 (Admin)' : ''}</Text>
-                          <Text style={{ fontSize: 11, color: Colors.light.textSecondary }}>{usr.email}</Text>
-                          <Text style={{ fontSize: 11, color: Colors.light.primary, marginTop: 2 }}>
-                            Plan: {usr.plan_type || 'Free'} | ID Status: {usr.id_verification_status}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                          <Text style={{ fontSize: 11, color: '#059669', fontWeight: 'bold' }}>{usr.photos_count} Photos</Text>
-                          {usr.unapproved_photos_count > 0 && (
-                            <Text style={{ fontSize: 10, color: '#d97706', fontWeight: 'bold' }}>{usr.unapproved_photos_count} Pending</Text>
-                          )}
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </ScrollView>
-            )}
+                    )
+                  ))}
+                </ScrollView>
+              );
+            })()}
           </View>
         </View>
+      </Modal>
+
+      {/* Photo Full-View Preview Modal */}
+      <Modal
+        visible={adminViewingPhotoModal !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAdminViewingPhotoModal(null)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => setAdminViewingPhotoModal(null)}
+        >
+          <View style={{ width: '90%', height: '70%', justifyContent: 'center', alignItems: 'center' }}>
+            {adminViewingPhotoModal && (
+              <Image
+                source={{ uri: adminViewingPhotoModal }}
+                style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                resizeMode="contain"
+              />
+            )}
+            <TouchableOpacity
+              onPress={() => setAdminViewingPhotoModal(null)}
+              style={{ position: 'absolute', top: -15, right: -10, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 20, padding: 6 }}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* Modal: Settings & Privacy */}
